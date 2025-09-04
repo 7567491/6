@@ -1,0 +1,29 @@
+
+{extend name="public/container"}
+{block name="title"}{if $is_pay}支付成功{else}支付失败{/if}{/block}
+{block name="head_top"}
+<style>
+    body{background-color: #cccccc}
+</style>
+{/block}
+{block name="content"}
+<div class="payState">
+    <!--fail.png-->
+    {if $is_pay}
+    <div class="pictrue"><img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/msg_image/success.png"></div>
+    <!--支付失败-->
+    <div class="status">支付成功</div>
+    <!--重新支付-->
+    <a class="learn" style="display: inherit;" href="{:Url('/m/my')}">个人中心</a>
+    {else}
+    <div class="pictrue"><img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/msg_image/error.png"></div>
+    <!--支付失败-->
+    <div class="status">支付失败</div>
+    <!--重新支付-->
+    <a class="learn" style="display: inherit;" href="{$m_home_url}">返回首页</a>
+    {/if}
+</div>
+{/block}
+{block name='foot'}
+
+{/block}

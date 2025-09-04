@@ -1,0 +1,82 @@
+# ThinkPHP 运行时文件
+/www.6page.cn/runtime/
+/www.6page.cn/runtime/*
+
+# 数据库配置文件 (包含敏感信息)
+/www.6page.cn/application/database.php
+
+# 上传的用户文件
+/www.6page.cn/public/uploads/
+
+# 日志文件
+/logs/
+*.log
+
+# 备份文件
+*.sql
+*.sql.gz
+*.tar.gz
+*_backup_*.sql
+all_databases.sql
+6page_database.sql
+current_6page_backup_*.sql
+*.tar.gz.*
+
+# 临时文件
+*.tmp
+*.temp
+/snapshots/
+
+# SSL 证书私钥
+*.pem
+*.key
+/ssl_certs/
+/configs/vhost/cert/
+/configs/vhost/ssl/
+
+# 系统和用户配置文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.bash_logout
+.bashrc
+.profile
+.sudo_as_admin_successful
+.ssh/
+.npm/
+.config/
+.cache/
+.env
+
+# IDE 和工具配置文件
+.vscode/
+.idea/
+*.sublime-*
+.claude/
+.claude.json
+.claude.json.backup
+.claudecode/
+
+# 缓存文件
+/www.6page.cn/runtime/cache/
+/www.6page.cn/runtime/temp/
+/www.6page.cn/runtime/log/
+
+# Composer
+/www.6page.cn/vendor/
+
+# 配置文件备份和工具文件
+backup_manifest.txt
+transfer_manifest.txt
+test_fix.php
+mig.html
+mig.md
+mig1.md
+
+# 特定的敏感配置和私有文件
+/configs/php/
+/configs/vhost/ssl/
+/backups/
+.websites_backup.*

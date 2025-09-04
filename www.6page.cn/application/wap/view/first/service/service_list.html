@@ -1,0 +1,153 @@
+
+{extend name="public/container"}
+{block name="title"}联系客服-{$Auth_site_name}{/block}
+{block name="head_top"}
+<link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/css/store_service.css" />
+{if $service_url neq '' && $service_configuration eq 2}
+<script type="text/javascript" src="{$service_url}/wy-chat-wp.js"></script>
+<script>
+    var wy_im_option = {
+        enable: true,
+        fast: true,
+        siteUrl: '{$service_url}',
+        token: '{$kefu_token}',
+        mobileIcon: '',
+        pcIcon: '',
+        chatPosition: '',
+        domId: 'wy-chat-im',
+        showButton: false,
+        showAD: 1,
+        autoOpen: true,
+        interval: '{$kefu_interval}',
+    };
+</script>
+<style>
+    #iframe_content{
+        height: calc(100% - 58px) !important;
+    }
+    .kefu-button{
+        padding: 5px 10px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+    }
+</style>
+{/if}
+<style>
+    .empty{width:100%;padding-top:1.4rem}
+    .empty img{width:46%;display:block;margin:0 auto}
+    .empty p{font-size:.22rem;line-height:1.2rem;text-align:center;color:#aaa}
+    .empty p a{color:#f84d30}
+    .empty .nothing {
+        position: fixed;
+        top: 30%;
+        left: 50%;
+        width: 4rem;
+        -webkit-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+    body {
+        background-color: #FFFFFF;
+    }
+</style>
+{/block}
+{block name="content"}
+{if $service_url neq '' && $service_configuration eq 2}
+<div id="wy-chat-im" style="text-align: center; padding: 50px 0;">
+    <span class="kefu-button">打开客服</span>
+</div>
+{/if}
+<div class="cus_server" id="app" v-clock>
+    <div v-if="serviceConfiguration==1">
+        <ul v-if="List.length>0">
+            <li>
+                <a href="javascript:;" v-for="item in List" @click="go_kefu(item)">
+                    <div>
+                        <img :src="fx_cdn_img(item.avatar)">
+                    </div>
+                    <span>{{item.nickname}}</span>
+                </a>
+            </li>
+        </ul>
+        <div class="empty" v-else>
+            <img class="nothing" src="{$Think.const.IMG_DOMAIN}/wap/images/no_data_available.png">
+        </div>
+    </div>
+{include file="public/store_menu"}
+</div>
+{/block}
+{block name='foot'}
+<script>
+    var site_name = "{$Auth_site_name}",isWechat='{$isWechat}',service_configuration='{$service_configuration}',service_url='{$service_url}';
+    var userInfo = {$userInfo};
+    require(['vue', 'helper', 'store', 'quick'], function (Vue, $h, app) {
+        new Vue({
+            el: '#app',
+            data: {
+                loading: false,
+                loadend: false,
+                loadTitle: '上拉加载更多',
+                List:[],
+                where:{
+                    page:1,
+                    limit:10
+                },
+                url: isWechat ? $h.U({ c: 'index', a: 'login' }) : $h.U({ c: 'login', a: 'phone_check' }),
+                site_name: site_name,
+                isWechat: isWechat,
+                serviceConfiguration:service_configuration,
+                kefu_token:'',
+            },
+            created: function () {
+                this.get_service_config();
+                {if $service_url neq '' && $service_configuration eq 2}
+                var wyChatInstance = new initFxChat(wy_im_option);
+                wyChatInstance.init();
+                if (window.wy_im_option.autoOpen) {
+                    wyChatInstance.getFxChat();
+                }
+                {/if}
+            },
+            methods: {
+                get_service_list:function () {
+                    if(this.serviceConfiguration==2) return;
+                    if(this.loading) return;
+                    if(this.loadend) return;
+                    this.loadTitle='';
+                    this.loading=true;
+                    app.baseGet($h.U({c:'service',a:'get_service_list',q:this.where}),function (res) {
+                        var list=res.data.data;
+                        var List=$h.SplitArray(list,this.List);
+                        this.loading=false;
+                        this.where.page=this.where.page++;
+                        this.loadend=list.length < this.where.limit;
+                        this.loadTitle=this.loadend ? '没有更多了': '上拉加载更多';
+                        this.$set(this,'List',List);
+                        this.$nextTick(function () {
+                            this.EventUtil();
+                        }.bind(this))
+                    }.bind(this),function (err) {
+                        this.loadTitle='加载更多';
+                        this.loading=false;
+                    }.bind(this));
+                },
+                EventUtil:function () {
+                    var that=this;
+                    $h.EventUtil.listenTouchDirection(document,function (){
+                        that.loading == false && that.get_service_list();
+                    },false);
+                },
+                get_service_config:function () {
+                    var that=this;
+                    app.baseGet($h.U({c:'service',a:'get_kefu_token'}),function (res) {
+                        that.kefu_token=res.data.data.kefu_token;
+                        that.get_service_list();
+                    });
+                },
+                go_kefu:function (item) {
+                    window.location.href="{:Url('service/service_ing')}?to_uid="+item.uid;
+                }
+            }
+        })
+    })
+</script>
+{/block}

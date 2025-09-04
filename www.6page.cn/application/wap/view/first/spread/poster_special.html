@@ -1,0 +1,136 @@
+
+{extend name="public/container"}
+{block name="title"}推广海报{/block}
+{block name="head"}
+<style>
+    body {
+        background-color: rgba(0, 0, 0, .6);
+        font-size: .24rem;
+        text-align: center;
+        color: #cecece;
+    }
+
+    .poster {
+        width: 6rem;
+        margin-top: .76rem;
+        margin-bottom: .5rem;
+        vertical-align: middle;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <img :src="imgSrc" class="poster">
+    <div v-show="imgSrc">长按图片，保存至手机</div>
+    <div v-show="imgSrc" class="spread-btn-box"><button @click="copyUrl(url)" class="spread-btn">复制分享链接</button></div>
+{include file="public/store_menu"}
+</div>
+<script>
+    require([
+        'vue',
+        'qrcode',
+        'helper',
+        'layer',
+        'quick',
+    ], function (Vue, QRCode, $h, layer) {
+        var url = "{$url}",
+            poster = "{$poster_image}",
+            site_name = '{$Auth_site_name}',
+            vm =  new Vue({
+                el: '#app',
+                data: {
+                    loading: false,
+                    imgSrc: '',
+                    url: url
+                },
+                watch: {
+                    loading: function (loading) {
+                        loading ? $h.loadFFF() : $h.loadClear();
+                    }
+                },
+                created: function () {
+                    var vm = this;
+                    if (!poster) {
+                        layer.confirm('推广链接生成成功，是否复制链接？', {
+                            title: false,
+                            closeBtn: false,
+                            btn: ['复制', '取消']
+                        }, function (index) {
+                            vm.copyUrl(url);
+                            window.location.href = '/wap/spread/special.html';
+                            layer.close(index);
+                        }, function (index) {
+                            window.location.href = '/wap/spread/special.html';
+                            layer.close(index);
+                        });
+                        return;
+                    }
+                    this.createPoster();
+                },
+                methods: {
+                    copyUrl: function (url) {
+                        var dom = document.createElement("input");
+                        dom.value = url;
+                        // dom.style.display = 'none';
+                        document.body.appendChild(dom);
+                        dom.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(dom);
+                        layer.confirm('链接复制成功', {
+                            title: false,
+                            closeBtn: false,
+                            btn: ['确定']
+                        }, function (index) {
+                            // window.location.href = '/wap/spread/special.html';
+                            layer.close(index);
+                        });
+                    },
+                    createPoster: function () {
+                        this.loading = true;
+                        var imagePromise = new Promise(function (resolve, reject) {
+                            var image = new Image();
+                            image.crossOrigin = 'anonymous';
+                            image.src = poster + '?' + new Date().getTime();
+                            image.onload = function () {
+                                resolve(image);
+                            },
+                            image.onerror = function () {
+                                reject('error-image');
+                            };
+                        }),
+                            qrcodePromise = new Promise(function (resolve, reject) {
+                                resolve(new QRCode(document.createElement('canvas'), url));
+                            });
+                        Promise.all([
+                            imagePromise,
+                            qrcodePromise
+                        ]).then(function (sources) {
+                            var canvas = document.createElement('canvas'),
+                                context = canvas.getContext('2d');
+                            canvas.width = 600;
+                            canvas.height = 960;
+
+                            context.fillStyle = '#FFFFFF';
+                            context.fillRect(0, 0, 600, 960);
+
+                            context.drawImage(sources[0], 0, 0, 600, 740);
+                            context.drawImage(sources[1]._el.firstElementChild, 118, 785, 150, 150);
+
+                            context.font = '22px sans-serif';
+                            context.fillStyle = '#999999';
+                            context.fillText('邀您加入' + site_name, 284, 832);
+                            context.fillText('长按识别或扫码进入', 284, 874);
+
+                            vm.imgSrc = canvas.toDataURL('image/jpeg');
+                            vm.loading = false;
+                            canvas = null;
+                        }).catch(function (err) {
+                            vm.loading = false;
+                            $h.pushMsg(err);
+                        });
+                    }
+                }
+            });
+    });
+</script>
+{/block}

@@ -1,0 +1,96 @@
+<div class="footer-section">
+    <div class="footer-top">
+        <div class="footer-inner footer-list">
+            {foreach $public_data['pc_footer_list'] as $key=>$item}
+            <div class="footer-item ">
+                <div class="footer-icon">
+                    <img src="{$item.pic}" title="{$item.title}" alt="{$item.title}">
+                </div>
+                <div class="footer-label">
+                    {$item.title}
+                </div>
+            </div>
+            {/foreach}
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="footer-meta">
+            {notempty name="public_data.full_name_the_company"}
+            <div class="footer-meta-item">{$public_data.full_name_the_company}</div>
+            {/notempty}
+            {notempty name="public_data.site_phone"}
+            <div class="footer-meta-item">联系电话：{$public_data.site_phone}</div>
+            {/notempty}
+            {notempty name="public_data.company_address"}
+            <div class="footer-meta-item">公司地址：{$public_data.company_address}</div>
+            {/notempty}
+        </div>
+        {notempty name="public_data.friendly_link"}
+        <div class="footer-links">
+            友情链接：{$public_data.friendly_link}
+        </div>
+        {/notempty}
+        {$public_data.beian}
+    </div>
+</div>
+<div class="wy-side-bar">
+    {if condition="count($public_data.pc_customer_service) neq '0'"}
+    <div class="wy-customer-box">
+        {foreach $public_data.pc_customer_service as $key=>$item}
+        {eq name="item" value="1"}
+        <div class="wy-side-item">
+            <div class="wy-side-btn" id="wy-chat-im" @click="openService">
+                <div class="wy-side-item-icon">
+                    <i class="iconfont icon-duihua"></i>
+                </div>
+                <div class="wy-side-item-label">在线咨询</div>
+            </div>
+        </div>
+        {/eq}
+        {eq name="item" value="2"}
+        <div class="wy-side-item">
+            <el-popover
+                    placement="left"
+                    width="150"
+                    trigger="hover">
+                <div class="wy-side-qrcode">
+                    <img src="{$public_data.customer_qrcode}" width="100%"/>
+                </div>
+                <div class="wy-side-btn" slot="reference">
+                    <div class="wy-side-item-icon">
+                        <i class="iconfont icon-erweima"></i>
+                    </div>
+                    <div class="wy-side-item-label">扫码联系</div>
+                </div>
+            </el-popover>
+        </div>
+        {/eq}
+        {eq name="item" value="3"}
+        <div class="wy-side-item">
+            <el-popover
+                    placement="left"
+                    width="150"
+                    trigger="hover"
+                    content="{$public_data.site_service_phone}">
+                <div class="wy-side-btn" slot="reference">
+                    <div class="wy-side-item-icon">
+                        <i class="iconfont icon-31dianhua"></i>
+                    </div>
+                    <div class="wy-side-item-label">电话联系</div>
+                </div>
+            </el-popover>
+        </div>
+        {/eq}
+        {/foreach}
+    </div>
+    {/if}
+    <div class="wy-back-top" :class="{'wy-backtop-show': backtopShow}">
+        <div class="wy-side-item" @click="backtop">
+            <div class="wy-side-btn">
+                <div class="wy-side-item-icon">
+                    <i class="iconfont icon-fanhuidingbu"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

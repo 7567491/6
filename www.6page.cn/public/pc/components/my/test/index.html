@@ -1,0 +1,33 @@
+<div class="my-exam">
+    <h1 class="my-title">我的练习</h1>
+    <div class="my-exam-wrapper">
+        <div v-if="examList.length" class="switch-panel">
+            <ul class="wy-test-list">
+                <li v-for="item in examList" :key="item.id" @click="goQuestion(item)">
+                    <div class="wy-test-title">
+                        {{ item.title }}
+                    </div>
+                    <div class="wy-test-info">
+                        <div class="wy-test-meta">
+                            <div class="wy-test-people">
+                                共{{ item.item_number }}题
+                            </div>
+                            <div class="wy-test-people">
+                                {{ item.number ? '已完成' : '未完成' }}
+                            </div>
+                        </div>
+                        <div>
+                            <a class="el-button el-button--primary el-button--mini is-round" v-if="item.number" :href="router.test + '?id=' + item.test_id">再次答题</a>
+                            <a class="el-button el-button--primary el-button--mini is-round" :href="router.test_result + '?test_id=' + item.test_id" v-if="item.number>0">答题结果</a>
+                            <a class="el-button el-button--primary el-button--mini is-round" :href="router.test + '?id=' + item.test_id" v-else>开始答题</a>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <el-empty v-if="examList.length==0 && loaded" image="/pc/images/empty4.png" description="暂无练习～"></el-empty>
+    <div v-if="examList.length" class="pagination">
+        <el-pagination layout="prev, pager, next" :total="count" :page-size="limit" :current-page.sync="page"></el-pagination>
+    </div>
+</div>

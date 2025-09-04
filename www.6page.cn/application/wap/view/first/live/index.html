@@ -1,0 +1,1704 @@
+
+{extend name="public/container"}
+{block name="title"}{$live_title}-{$Auth_site_name}{/block}
+{block name="head_top"}
+<script src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/layer_mobile/layer.js"></script>
+<script>
+    window.room = {$room};
+    window.workermanConfig = {$workerman};
+    window.uids = "{$userInfo['uid']}";
+    window.socketDebug = true;
+</script>
+<style>
+    html,
+    body,
+    #app {
+        height: 100%;
+    }
+
+    .live .chat .item .text .info img.cont {
+        width: 50%;
+    }
+
+    .preview .layui-m-layercont {
+        padding: 0;
+    }
+
+    .preview .layui-m-layercont img {
+        display: block;
+        max-width: 90%;
+        max-height: 90%;
+        margin: 0 auto;
+        object-fit: scale-down;
+    }
+
+    .loading {
+        padding-top: .1rem;
+        padding-bottom: .1rem;
+        font-size: .28rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .loading .fa {
+        font-size: .4rem;
+    }
+
+    .loaded {
+        font-size: .28rem;
+        line-height: .72rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .nothing {
+        position: absolute;
+        top: 30%;
+        left: 50%;
+        width: 4rem;
+        background: url("{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/no_data_available.png") center/contain no-repeat;
+        -webkit-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+    .footer{
+        z-index:10;background-color: #fff;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="live">
+        <div :style="{ height: playerHeight + 'px' }" class="header">
+            <div v-show="liveInfo.is_play || PullUrl || liveInfo.is_playback" class="prism-player" id="J_prismPlayer">
+                {if condition="!$is_close_watermark"}
+                <div class="video-watermark" id="video-watermark">
+                    {if condition="$is_site_watermark"}
+                    <div>{$Auth_site_name}</div>
+                    {/if}
+                    {if condition="$is_account_watermark"}
+                    <div>{$userInfo.account ? $userInfo.account : ''}</div>
+                    {/if}
+                </div>
+                {/if}
+            </div>
+            <div v-show="!liveInfo.is_play && !PullUrl && !liveInfo.is_playback" class="text">
+                <div>{{ liveText }}</div>
+                <count-down v-show="!live_status" :day-show="false" :sec-show="false" :time="datatime"></count-down>
+            </div>
+        </div>
+        <div class="nav">
+            <div :class="{ active: navActive === 0 }" class="item" @click="navActive = 0">聊天</div>
+            <div :class="{ active: navActive === 1 }" class="item" @click="navActive = 1">课堂</div>
+            <div :class="{ active: navActive === 2 }" class="item" @click="navActive = 2">推荐</div>
+            <div :class="{ active: navActive === 3 }" class="item" @click="navActive = 3">排行</div>
+        </div>
+        <div ref="main" class="main">
+            <!-- 聊天 -->
+            <div v-show="navActive === 0" ref="chat" class="section" @click="emojiKeyboardHide" @scroll="chatScroll">
+                <div class="chat">
+                    <div class="loading">
+                        <span v-show="Oloading" class="fa fa-spinner loadingpic"></span>
+                        <div v-if="Oloadend && Opage > 2">已全部加载</div>
+                    </div>
+                    <div v-if="OpenCommentList.length" class="list">
+                        <div v-for="(item, index) in OpenCommentList" :key="index" class="item">
+                            <div class="avatar">
+                                <img :src="fx_cdn_img(item.avatar)" class="img">
+                            </div>
+                            <div class="text">
+                                <div class="name" v-text="item.nickname" v-if="item.user_type==2 && user_type == 2">加载中</div>
+                                <div class="name" v-else>
+                                    <span v-if="item.user_type==1">[讲师]</span>
+                                    <span v-else-if="item.user_type==0">[助教]</span>
+                                    <span>{{item.nickname}}</span>
+                                    <span class="return" v-if="user_type != 2 && item.uid != 0 " @click="recall(item.id,index)">撤回</span>
+                                </div>
+                                <div class="info" v-if="item.type==1">
+                                    <div class="cont" v-html="item.content"></div>
+                                </div>
+                                <div class="info" v-else-if="item.type==2 && item.content">
+                                    <img :src="item.content" class="cont" @click="preview(item.content)">
+                                </div>
+                                <div class="info" v-else-if="item.type==3">
+                                    <div class="cont" v-if="userInfo.uid == item.uid " @click="play_audio(item,index,'OpenCommentList')">{{item.duration || 0}}’’
+                                        <img :src="item.is_play ? '/wap/images/signal2.gif':'/wap/images/signal.png'" class="signal signalR" style="margin-left:0.27rem;cursor: pointer">
+                                    </div>
+                                    <div class="conter acea-row row-middle" v-else @click="play_audio(item,index,'OpenCommentList')">
+                                        <img :src="item.is_play ? '/wap/images/signal2.gif':'/wap/images/signal.png'" class="signal" style="margin-left:0.27rem;cursor: pointer;">{{item.duration || 0}}’’
+                                    </div>
+                                    <div class="spot" v-if="item.is_play"></div>
+                                </div>
+                                <div v-else-if="item.type === 4" class="info">
+                                    <div class="cont">{{ item.content }}{{ item.gift_name }}<img :src="item.gift_image">×{{ item.gift_num }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 课堂 -->
+            <div v-show="navActive === 1" ref="lesson" class="section class" @click="emojiKeyboardHide">
+                <div class="chat">
+                    <div class="load">
+                        <span v-show="loading==true" class="fa fa-spinner loadingpic"></span>
+                        <span v-text="loadTitle" @click="getCommentList">点击加载更多</span>
+                    </div>
+                    <div class="list">
+                        <div v-for="(item, index) in CommentList" :key="index" class="item">
+                            <div class="avatar">
+                                <img :src="fx_cdn_img(item.avatar)" class="img">
+                            </div>
+                            <div class="text">
+                                <div class="name" v-text="item.nickname" v-if="item.user_type==2 && user_type == 2">加载中</div>
+                                <div class="name" v-else>
+                                    <span v-if="item.user_type==1">[讲师]</span>
+                                    <span v-else-if="item.user_type==0">[助教]</span>
+                                    <span>{{item.nickname}}</span>
+                                    <span class="return" v-if="user_type != 2 && item.uid != 0" @click="recall(item.id,index)">撤回</span>
+                                </div>
+                                <div class="info" v-if="item.type==1">
+                                    <div class="cont" v-html="item.content"></div>
+                                </div>
+                                <div class="info" v-else-if="item.type==2 && item.content">
+                                    <img :src="item.content" class="cont" @click="preview(item.content)">
+                                </div>
+                                <div class="info" v-else-if="item.type==3">
+                                    <div class="cont" v-if="userInfo.uid == item.uid " @click="play_audio(item,index,'CommentList')">
+                                        {{item.duration || 0}}’’
+                                        <img :src="item.is_play ? '/wap/images/signal2.gif':'/wap/images/signal.png'" class="signal signalR" style="margin-left:0.27rem;cursor: pointer;">
+                                    </div>
+                                    <div class="cont" v-else @click="play_audio(item,index,'CommentList')">
+                                        <img :src="item.is_play ? '/wap/images/signal2.gif':'/wap/images/signal.png'" class="signal" style="margin-left:0.27rem;cursor: pointer;">{{item.duration || 0}}’’
+                                    </div>
+                                    <div class="spot" v-if="item.is_play"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 推荐 -->
+            <div v-show="navActive === 2" class="section recom">
+                <div class="list">
+                    <div v-for="(item, index) in updateRecomList" :key="item.id" class="item">
+                        <div class="image">
+                            <div class="tag">{{ item.gfake_type ? '商品' : '课程' }}</div>
+                            <img :src="fx_cdn_img(item.image)" class="img">
+                        </div>
+                        <div class="text">
+                            <div class="name">{{ item.title }}</div>
+                            <div class="label">
+                                <div v-for="(itm, idx) in item.label" :key="idx" class="cell">{{ itm }}</div>
+                            </div>
+                            <div class="money">
+                                <div class="sell">¥<span class="num">{{ item.money }}</span></div>
+                            </div>
+                            <a :href="(item.is_light ? '{:url('/m/single-course')}' : '{:url('/m/view-course')}') + '?id=' +item.id" v-if="item.gfake_type==0" class="link">去订购</a>
+                            <a :href="$h.U({s: true,c: 'store', a: 'detail', q: {id: item.id}})" v-else class="link">去订购</a>
+                        </div>
+                    </div>
+                </div>
+                <div v-show="loadings" class="loading">
+                    <span class="fa fa-spinner loadingpic"></span>
+                </div>
+                <div v-if="!loadings && !recomList.length" class="nothing"></div>
+            </div>
+            <!-- 排行 -->
+            <div v-show="navActive === 3" class="section rank">
+                <div v-if="rankList.length" class="list">
+                    <template v-for="(item, index) in rankList">
+                        <div v-if="item.uid === userInfo.uid" :key="index" class="item">
+                            <div class="type">
+                                <img v-if="index === 0" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal01.png" class="img">
+                                <img v-else-if="index === 1" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal02.png" class="img">
+                                <img v-else-if="index === 2" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal03.png" class="img">
+                                <template v-else>{{ index + 1 }}</template>
+                            </div>
+                            <div class="image">
+                                <img :src="item.avatar ? "fx_cdn_img(item.avatar)" : '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/avatar_default.png'" class="img">
+                            </div>
+                            <div class="name">{{ item.nickname }}</div>
+                            <div :style="{ backgroundImage: 'url(' + goldInfo.gold_image + ')' }" class="num">{{ item.total_price }}</div>
+                        </div>
+                    </template>
+                </div>
+                <div v-if="rankList.length" class="list">
+                    <div v-for="(item, index) in rankList" :key="index" class="item">
+                        <div class="type">
+                            <img v-if="index === 0" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal01.png" class="img">
+                            <img v-else-if="index === 1" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal02.png" class="img">
+                            <img v-else-if="index === 2" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/medal03.png" class="img">
+                            <template v-else>{{ index + 1 }}</template>
+                        </div>
+                        <div class="image">
+                            <img :src="item.avatar ? "fx_cdn_img(item.avatar)" : '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/avatar_default.png'" class="img">
+                        </div>
+                        <div class="name">{{ item.nickname }}</div>
+                        <div :style="{ backgroundImage: 'url(' + goldInfo.gold_image + ')' }" class="num">{{ item.total_price }}</div>
+                    </div>
+                </div>
+                <div v-show="loadings" class="loading">
+                    <span class="fa fa-spinner loadingpic"></span>
+                </div>
+                <div v-if="!loadings && !rankList.length" class="nothing"></div>
+            </div>
+            <!-- 欢迎语 -->
+            <div :class="{ on: notice }" class="welcome"><span class="name">{{ notice }}</span> 直播间</div>
+            <!-- 在线人数 -->
+            <div v-show="2 > navActive" ref="online" class="online">{{ UserSum }} 人</div>
+            <!-- 右侧按钮 -->
+            <div v-show="2 > navActive" ref="menu" class="side-menu">
+                <button v-show="navActive === 1" class="btn barrage-btn" type="button" @click="barrage = !barrage">
+                    <img :src="barrage ? '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/barrage1.png' : '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/barrage2.png'">
+                </button>
+                <button v-show="giftList.length" class="btn" type="button" @click="giftShow = true">
+                    <img class="img" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/gift1.png">
+                </button>
+            </div>
+            <!-- 礼物特效 -->
+            <div v-if="giftFloat" :class="{ on: giftFloat }" class="gift-float">
+                <div class="cont">
+                    <div :style="{ backgroundImage: 'url(' + giftFloat.user_avatar + ')' }" class="avatar"></div>
+                    <div class="text">
+                        <div class="name">{{ giftFloat.username }}</div>
+                        送出 {{ giftFloat.gift.live_gift_name }}
+                    </div>
+                    <div :style="{ backgroundImage: 'url(' + giftFloat.gift.live_gift_show_img + ')' }" class="image"></div>
+                </div>
+                <div class="num">×{{ giftFloat.live_gift_num }}</div>
+            </div>
+            <!-- 弹幕 -->
+            <div v-show="navActive === 1" ref="barrage" :class="{ on: barrage }" :style="{ top: barrageTop + 'px', bottom: barrageTottom + 10 + 'px' }" class="barrage">
+                <div class="item acea-row row-middle row-right" v-for="item in BarrageList">
+                    <div class="text" v-html="item.content" v-if="item.type!=2"></div>
+                    <div class="text" v-else>
+                        <img :src="item.content" alt="" style="width: 1.5rem;height: auto;">
+                    </div>
+                    <div class="pictrue">
+                        <img :src="fx_cdn_img(item.avatar)">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-show="2 > navActive" class="footer">
+            <!-- 输入 -->
+            <div class="control">
+                <button class="button" type="button" @click="emoticon">
+                    <img class="img" :src="emojiShow ? '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/keyboard.png' : '{__WAP_PATH}/images/face.png'">
+                </button>
+                <button v-if="user_type == 0 || user_type == 1" class="button" type="button" @click="push">
+                    <img class="img" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/plus.png">
+                </button>
+                <form class="form" @submit.prevent="push">
+                    <input ref="input" v-model="content" class="text" type="text">
+                    <input v-show="content" class="submit" type="submit" value="">
+                </form>
+            </div>
+
+            <!-- 表情包 -->
+            <div v-show="emojiShow" id="emoji" class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div v-for="(item, index) in emojiList" :key="index" class="swiper-slide">
+                        <button v-for="(itm, idx) in item" :key="idx" class="button" type="button">
+                            <img :src="itm.url" class="img" @click="mine(itm)">
+                        </button>
+                        <button class="button" type="button" @click="delEmoji">
+                            <img class="img" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/del.png">
+                        </button>
+                    </div>
+                </div>
+                <div id="emoji-pagination" class="swiper-pagination"></div>
+            </div>
+        </div>
+        <!-- 打赏 -->
+        <div :class="{ mask: giftShow }" @click="giftShow = false"></div>
+        <div v-show="giftShow" class="gift-wrapper">
+            <div id="gift" class="swiper-container gift">
+                <div class="swiper-wrapper">
+                    <div v-for="(item, index) in updateGiftList" :key="index" class="swiper-slide">
+                        <div v-for="(itm, idx) in item" :key="itm.id" :class="{ on: idx === giftIndexOn }" class="item" @click="giftIndexOn = idx; giftOn = itm">
+                            <div class="image">
+                                <img :src="itm.live_gift_show_img" class="img">
+                            </div>
+                            <div class="name">{{ itm.live_gift_name }}</div>
+                            <div :style="{ backgroundImage: 'url(' + goldInfo.gold_image + ')' }" class="num">{{ itm.live_gift_price }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div v-show="updateGiftList.length > 1" id="gift-pagination" class="swiper-pagination"></div>
+            </div>
+            <div class="foot">
+                <div class="text-group">
+                    <a :href="$h.U({c: 'special', a: 'recharge_index'}) + '?from=live&stream_name=' + liveInfo.stream_name + '&record_id=' + recordId">
+                        <span v-if="userInfo.gold_num" :style="{ backgroundImage: 'url(' + goldInfo.gold_image + ')' }" class="number">{{ userInfo.gold_num }}</span>
+                        <span v-else>充值</span>
+                        <span class="iconfont iconxiangyou"></span>
+                    </a>
+                </div>
+                <div class="button-group">
+                    <button class="button select" type="button" @click="giftSelectShow = !giftSelectShow">
+                        {{ giftNumSelected }}<span :class="['iconfont', giftSelectShow ? 'iconxiangxia' : 'iconxiangshang']"></span>
+                        <ul v-show="giftSelectShow" class="list">
+                            <li v-for="(item, index) in giftOn.live_gift_num" :key="item" @click.prevent="giftNumSelected = item">{{ item }}</li>
+                        </ul>
+                    </button>
+                    <button class="button post" type="button" @click="giveGift">赠送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- <quick-menu></quick-menu> -->
+</div>
+<script charset="utf-8" type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/WebSocket.js"></script>
+<script>
+    var liveInfo = {$liveInfo},
+        PullUrl = '{$PullUrl? $PullUrl: ""}',
+        datatime = {$datatime},
+        phone_type = {$phone_type},
+        isWechat = {$isWechat? 'true' : 'false'},
+        userInfo = {:json_encode($userInfo)},
+    live_status = {$live_status},
+        user_type = {$user_type},
+        OpenCommentCount = {$OpenCommentCount},
+        CommentCount = {$CommentCount},
+        OpenCommentTime = {$OpenCommentTime? $OpenCommentTime : 0},
+        CommentTime = {$CommentTime? $CommentTime : 0},
+        is_ban = {$is_ban},
+        UserSum = {$UserSum},
+        goldInfo = {$goldInfo};
+</script>
+<script>
+    require(['vue', 'helper', 'store', '{__WAP_PATH}/face/emoji.js', 'swiper', 'layer', '{__WAP_PATH}/js/countdown.js'], function (Vue, $h, store, emoji, Swiper, layer) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                windowWidth: window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
+                bottom: '',
+                phone_type: phone_type,
+                UserSum: UserSum,
+                isWechat: isWechat,
+                OpenCommentCount: OpenCommentCount,
+                user_type: user_type,
+                userInfo: userInfo,
+                barrage: true,
+                discuss: false,
+                datatime: datatime,
+                voice: false,
+                speak: '按住 说话',
+                recording: false,
+                is_ban: is_ban,
+                live_error: '',
+                liveInfo: liveInfo,
+                PullUrl: PullUrl,
+                player: null,
+                //讲师助教区域
+                CommentList: [],
+                //弹幕列表
+                BarrageList: [],
+                //展开的评价区域列表
+                OpenCommentList: [],
+                loading: false,
+                loadend: false,
+                loadTitle: '点击加载更多',
+                Oloading: false,
+                Oloadend: false,
+                // OloadTitle: '点击加载更多',
+                content: '',
+                live_status: live_status,
+                layerIndex: null,
+                page: 1,
+                limit: 16,
+                Olimit: 7,
+                Opage: 1,
+                cd: 3,
+                is_SendOut: true,
+                isAnimate: false,//是否回到底部
+                starttime: 0,
+                endtime: 0,
+                timeEnd: 60,
+                autoCloseRecord: null,
+                notice: '',
+                emojiList: emoji,
+                emojiShow: false,
+                giftList: [],
+                giftIndexOn: 0,
+                giftOn: {},
+                giftSelectShow: false,
+                giftShow: false,
+                giftNumSelected: 1,
+                giftFloat: null,
+                goldInfo: goldInfo,
+                recomList: [],
+                rankList: [],
+                navActive: 0,
+                loadings: false,
+                barrageTop: 0,
+                barrageTottom: 0,
+                // 虚拟直播对象
+                fake_video: null,
+                // 设置播放器当前播放时间
+                seekTime: 0,
+                // 是否第一次轮训直播室信息
+                isFirst: true,
+                isPaused: false,
+            },
+            computed: {
+                playerHeight: function () {
+                    return Math.floor(this.windowWidth * 9 / 16);
+                },
+                liveText: function () {
+                    switch (this.live_status) {
+                        case 0:
+                            return '直播即将开始';
+                            break;
+                        case -1:
+                        case 1:
+                            return '讲师离开一会~马上回来';
+                            break;
+                        case 2:
+                            return '直播已结束';
+                            break;
+                    }
+                },
+                updateGiftList: function () {
+                    var that = this,
+                        list = that.giftList,
+                        listLen = list.length,
+                        slideLen = listLen % 8 ? Math.floor(listLen / 8 + 1) : listLen / 8,
+                        index = 0,
+                        temp = [],
+                        arr = [];
+                    for (index = 0; index < slideLen; index++) {
+                        temp = list.slice(index * 8, index * 8 + 8);
+                        arr.push(temp);
+                    }
+                    return arr;
+                },
+                updateRecomList: function () {
+                    var that = this;
+                    return that.recomList.map(function (value) {
+                        if (typeof value.label === 'string') {
+                            value.label = JSON.parse(value.label);
+                        }
+                        if (that.userInfo.level && value.member_pay_type) {
+                            value.money = value.member_money;
+                        }
+                        return value;
+                    });
+                }
+            },
+            watch: {
+                giftIndexOn: function () {
+                    this.giftSelectShow = false;
+                },
+                notice: function (value) {
+                    var that = this;
+                    if (!value) {
+                        return;
+                    }
+                    setTimeout(function () {
+                        that.notice = '';
+                    }, 1500);
+                },
+                giftFloat: function (value) {
+                    var that = this;
+                    if (!value) {
+                        return;
+                    }
+                    setTimeout(function () {
+                        that.giftFloat = null;
+                    }, 2000);
+                },
+                CommentList: function () {
+                    if (this.navActive !== 1) {
+                        return;
+                    }
+                    // this.contentScroll(this.$refs.lesson);
+                },
+                OpenCommentList: function () {
+                    if (this.navActive !== 0) {
+                        return;
+                    }
+                    this.contentScroll(this.$refs.chat);
+                },
+                emojiShow: function () {
+                    var dom = this.$refs.lesson;
+                    if (this.navActive === 1) {
+                        dom = this.$refs.chat;
+                    }
+                    this.contentScroll(dom);
+                },
+                BarrageList: function () {
+                    this.$nextTick(function () {
+                        this.$refs.barrage.scrollTop = this.$refs.barrage.scrollHeight;
+                    });
+                },
+                navActive: function (value) {
+                    switch (value) {
+                        case 1:
+                            this.$nextTick(function () {
+                                this.barrageTottom = this.$refs.main.offsetHeight - this.$refs.menu.offsetTop;
+                                if (this.page == 2 && !this.$refs.lesson.scrollTop) {
+                                    this.$refs.lesson.scrollTop = this.$refs.lesson.scrollHeight - this.scrollHeight;
+                                }
+                            });
+                            break;
+                        case 2:
+                            this.getRecomList();
+                            break;
+                        case 3:
+                            this.getRankList();
+                            break;
+                    }
+                },
+                giftList: function () {
+                    this.$nextTick(function () {
+                        this.barrageTottom = this.$refs.main.offsetHeight - this.$refs.menu.offsetTop;
+                    });
+                }
+            },
+            created: function () {
+                this.recordId = this.getUrlStr('record_id');
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    this.barrageTop = this.$refs.online.offsetTop + this.$refs.online.offsetHeight;
+                    this.barrageTottom = this.$refs.main.offsetHeight - this.$refs.menu.offsetTop;
+                    var that = this;
+                    window.addEventListener('resize', function () {
+                        that.windowWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+                    });
+                    var skinLayoutchildren = [
+                        { name: "progress", align: "blabs", x: 0, y: 44 },
+                        { name: "playButton", align: "tl", x: 15, y: 12 },
+                        { name: "timeDisplay", align: "tl", x: 10, y: 7 },
+                        { name: "setting", align: "tr", x: 15, y: 12 },
+                        { name: "fullScreenButton", align: "tr", x: 10, y: 10 },
+                        { name: "subtitle", align: "tr", x: 15, y: 12 },
+                        { name: "volume", align: "tr", x: 5, y: 10 }
+                    ];
+
+                    window.overallShare = false;
+                    mapleWx($jssdk(), function () {
+                        this.onMenuShareAll({
+                            title: that.liveInfo.live_title,
+                            desc: that.liveInfo.abstract,
+                            imgUrl: that.liveInfo.live_image,
+                            link: location.href.indexOf('?') == -1 ?
+                                location.href + '?spread_uid=' + that.userInfo.uid :
+                                location.href + '&spread_uid=' + that.userInfo.uid,
+                        });
+                    });
+                    document.addEventListener('touchstart', function (event) {
+                        var target = event.target;
+                        if (target.classList.contains('preview-img')) {
+                            layer.closeAll();
+                        }
+                    });
+                    $(document).on("change", ".images", function () {
+                        if (this.files.length > 1) return that.msg('您上传的图片不能大与1张');
+                        var file = this.files[0];
+                        if (file) {
+                            var formData = new FormData();
+                            formData.append('file', file);
+                            $.ajax({
+                                url: '{:Url("auth_api/upload")}',
+                                type: 'POST',
+                                data: formData,
+                                contentType: false,
+                                processData: false,
+                                dataType: 'json',
+                                success: function (res) {
+                                    if (res.code == 200) {
+                                        that.isAnimate = true;
+                                        socket.ws.send('{"room":' + that.liveInfo.id + ',"uid":' + window.uids + ',"content":"' + res.data.url + '","ms_type":"2","type":"send"}');
+                                    } else {
+                                        that.msg(res.msg);
+                                    }
+                                }
+                            })
+                        }
+                    });
+                    window.vm = vm;
+                    this.KeyboardStatus();
+                    this.getCommentList();
+                    this.getOpenCommtList();
+                    this.createEmojiSwiper();
+                    this.createGiftSwiper();
+                    this.getGiftList();
+                    // this.getRecomList();
+                    this.getRankList();
+                    this.countRoomUser();
+
+                    // 虚拟直播处理
+                    // 第一次加载时候才计算进度和创建播放器
+                    if (vm.liveInfo.is_fake && vm.isFirst) {
+                        // 判断当前直播是否在直播时间内
+                        var start_play_time = new Date(vm.liveInfo.start_play_time).getTime();
+                        var stop_play_time = new Date(vm.liveInfo.stop_play_time).getTime();
+                        var current_time = new Date(vm.liveInfo.current_time).getTime();
+
+                        vm.liveInfo.is_play = current_time >= start_play_time && current_time < stop_play_time;
+                        vm.liveInfo.is_playback = current_time >= stop_play_time;
+                        // 计算播放器进度
+                        if (vm.liveInfo.is_play) {
+                            vm.seekTime = current_time - start_play_time;
+                        }
+                        // 处理观看回放逻辑
+                        if (current_time >= stop_play_time) {
+                            layer.confirm('直播已结束，是否观看回放？', {
+                                btn: ['观看回放', '取消'] //按钮
+                            }, function (index) {
+                                vm.liveInfo.is_playback = true
+                                if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                                    vm.$nextTick(function () {
+                                        vm.createPlayer();
+                                    })
+                                    layer.close(index);
+                                    return
+                                }
+                                vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                                layer.close(index);
+                            }, function (index) {
+                                vm.liveInfo.is_playback = false
+                                layer.close(index);
+                            });
+                            vm.isFirst = false
+                            return
+                        }
+                        // 处理直播未开始，进入倒计时状态
+                        if (current_time < start_play_time) {
+                            vm.liveInfo.is_play = false;
+                            vm.liveInfo.is_playback = false;
+                            var countdown_time = start_play_time - current_time;
+                            var countdown_timer = setInterval(function () {
+                                countdown_time -= 1000;
+                                console.log(countdown_time);
+                                if(countdown_time <= 0) {
+                                    vm.liveInfo.is_play = true;
+                                    vm.liveInfo.is_playback = false;
+                                    clearInterval(countdown_timer);
+                                    if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                                        vm.$nextTick(function () {
+                                            vm.createPlayer();
+                                        })
+                                        vm.isFirst = false
+                                        return
+                                    }
+                                    vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                                    vm.isFirst = false
+                                }
+                            }, 1000)
+                            return
+                        }
+                        if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                            vm.$nextTick(function () {
+                                vm.createPlayer();
+                            })
+                            vm.isFirst = false
+                            return
+                        }
+                        vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                        vm.isFirst = false
+                        return
+                    }
+                    if (this.liveInfo.is_play) {
+                        skinLayoutchildren = [
+                            { name: "liveDisplay", align: "tlabs", x: 15, y: 6 },
+                            { name: "fullScreenButton", align: "tr", x: 10, y: 10 },
+                            { name: "volume", align: "tr", x: 5, y: 10 }
+                        ];
+                    }
+                    if (this.PullUrl || this.liveInfo.is_play) {
+                        this.player = new Aliplayer({
+                            id: 'J_prismPlayer',
+                            width: '100%',
+                            height: '100%',
+                            autoplay: true,
+                            isLive: this.liveInfo.is_play ? true : false,
+                            source: this.PullUrl,
+                            skinLayout: [
+                                { name: "bigPlayButton", align: "cc" },
+                                { name: "errorDisplay", align: "tlabs", x: 0, y: 0 },
+                                { name: "infoDisplay", align: "cc" },
+                                {
+                                    name: "controlBar", align: "blabs", x: 0, y: 0,
+                                    children: skinLayoutchildren
+                                }
+                            ]
+                        }, function (player) {
+                            if (!!navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/) && that.liveInfo.is_play) {
+                                player.on('pause', function () {
+                                    player.play()
+                                })
+                            }
+                        });
+                        this.bindEvevt();
+                    }
+                });
+            },
+            methods: {
+                // 虚拟直播播放器部分
+                // 获取playauth
+                get_video_playback_credentials: function (videoId) {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'special',
+                        a: 'get_video_playback_credentials',
+                        q: {
+                            videoId: videoId,
+                            type: 2
+                        }
+                    }), function (res) {
+                        var request = new XMLHttpRequest();
+                        request.onreadystatechange = function () {
+                            if (request.readyState == 4 && request.status == 200) {
+                                var data = JSON.parse(request.responseText);
+                                vm.duration = data.VideoMeta.Duration;
+                                vm.createPlayer(data.PlayAuth);
+                            }
+                        };
+                        request.open('GET', res.data.msg);
+                        request.send();
+                    }, function () {
+                    });
+                },
+                // 创建播放器
+                createPlayer: function (playauth) {
+                    var vm = this;
+                    var options = {
+                        id: 'J_prismPlayer',
+                        vid: vm.liveInfo.videoId,
+                        playauth: playauth || '',
+                        autoplay: true,
+                        height: '100%',
+                        controlBarVisibility: 'always',
+                        format: ''
+                    };
+                    if(vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                        options.vid = '';
+                        options.source = vm.liveInfo.link;
+                        options.encryptType = 0;
+                    }
+                    if(vm.liveInfo.video_type === 2) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.liveInfo.video_type === 3) {
+                        options.encryptType = 1;
+                        options.playConfig = {EncryptType:'AliyunVoDEncryption'};
+                        var check = function () {
+                            function doCheck(a) {
+                                if (("" + a / a)["length"] !== 1 || a % 20 === 0) {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                } else {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                }
+                                doCheck(++a)
+                            }
+                            try {
+                                doCheck(0)
+                            } catch (err) {}
+                        };
+                        check();
+                    }
+
+                    // 判断是否正在直播，控制状态栏
+                    if (vm.liveInfo.is_play) {
+                        options.skinLayout = [
+                            {name: "bigPlayButton", align: "blabs", x: 30, y: 80},
+                            {
+                                name: "H5Loading", align: "cc"
+                            },
+                            {name: "errorDisplay", align: "tlabs", x: 0, y: 0},
+                            {name: "infoDisplay"},
+                            {name:"tooltip", align:"blabs",x: 0, y: 56},
+                            {name: "thumbnail"},
+                            {
+                                name: "controlBar", align: "blabs", x: 0, y: 0,
+                                children: [
+                                    { name: "liveDisplay", align: "tlabs", x: 15, y: 6 },
+                                    { name: "fullScreenButton", align: "tr", x: 10, y: 10 },
+                                    { name: "volume", align: "tr", x: 5, y: 10 }
+                                ]
+                            }
+                        ]
+                    }
+
+                    // ios
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.fake_video) {
+                        vm.fake_video.dispose();
+                        vm.fake_video = null;
+                    }
+
+                    vm.fake_video = new Aliplayer(options, function (player) {
+                        // 对免流播放进行特殊处理
+                        if (vm.liveInfo.video_type === 4) {
+                            setInterval(function (){
+                                // 每隔10分钟重新获取播放地址，防止鉴权过期
+                                store.baseGet('/web/live/live_studio_index?stream_name=' + vm.liveInfo.stream_name, function (res) {
+
+                                    // 获取当前播放的时间
+                                    var currentTime = vm.fake_video.getCurrentTime();
+                                    let link = JSON.parse(res.data.data.liveInfo.link);
+                                    let play_url = '';
+                                    for (let key in link) {
+                                        play_url = link[key];
+                                    }
+                                    vm.fake_video.loadByUrl(play_url, currentTime)
+                                    var status = vm.fake_video.getStatus();
+                                    if (!vm.liveInfo.is_play && (status === 'ended' || status === 'pause')) {
+                                        vm.isPaused = true;
+                                    }
+                                }, function (err) {
+                                });
+                            }, 60 * 10 * 1000)
+                        }
+                    });
+                    vm.fake_video.on('ready', vm.onPlayerReady);
+                    vm.fake_video.on('canplay', vm.onPlayerCanplay);
+                    vm.fake_video.on('ended', vm.onPlayerEnded);
+                    vm.fake_video.on('timeupdate', vm.onPlayerTimeupdate);
+                },
+                onPlayerReady: function (e) {
+                    var vm = this;
+                    vm.duration = vm.fake_video.getDuration();
+                },
+                onPlayerCanplay: function () {
+                    var vm = this;
+                    // 判断是否正在直播
+                    if (vm.liveInfo.is_play) {
+                        vm.fake_video.seek(vm.seekTime / 1000)
+                    } else {
+                        // 直播已结束
+                        console.log('直播已结束')
+                        if (vm.isPaused) {
+                            vm.fake_video.pause();
+                        }
+                    }
+                },
+                onPlayerEnded: function () {
+                    var vm = this;
+                },
+                onPlayerTimeupdate: function () {
+                },
+                resetVideoSize: function () {
+                    var fullWidth = window.innerWidth - 360 - 350;
+                    var videoHeight = fullWidth * 9 / 16
+                    this.video_height = videoHeight
+                },
+                // 向下滚动加载
+                chatScroll: function (event) {
+                    var target = event.target;
+                    if (target.scrollTop) {
+                        return;
+                    }
+                    switch (this.navActive) {
+                        case 0:
+                            this.isDown = false;
+                            this.scrollHeight = target.scrollHeight;
+                            this.getOpenCommtList();
+                            break;
+                        case 1:
+                            this.getCommentList();
+                            break;
+                    }
+                },
+                // 预览图片
+                preview: function (img) {
+                    layer.open({
+                        style: 'background:none',
+                        className: 'preview',
+                        content: '<img class="preview-img" src="' + img + '">'
+                    });
+                },
+                getUrlStr: function (name) {
+                    var pattern = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i'),
+                        array = document.location.search.slice(1).match(pattern);
+                    if (array) {
+                        return decodeURI(array[2]);
+                    }
+                    return null;
+                },
+                emojiKeyboardHide: function () {
+                    if (this.emojiShow) {
+                        this.emojiShow = false;
+                    }
+                },
+                // 滚动条滚到底部
+                contentScroll: function (params) {
+                    this.$nextTick(function () {
+                        params.parentNode.scrollTop = this.isDown ? params.scrollHeight : params.scrollHeight - this.scrollHeight;
+                    });
+                },
+                // 设置赠送礼物后的功功能
+                setGiftFloat: function (res) {
+                    var cont = '赠送给主播',
+                        gift = null,
+                        type = 1;
+                    if (!res.recharge_status) {
+                        return this.msg('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                    }
+                    gift = this.giftList.find(function (value) {
+                        return value.id === res.live_gift_id;
+                    });
+                    if (!gift) {
+                        return this.msg('gift异常');
+                    }
+                    res.gift = gift
+                    this.giftFloat = res;
+                    cont += gift.live_gift_name + '<img src="' + res.gift.live_gift_show_img + '"> ×' + res.live_gift_num;
+                    this.BarrageList.push({
+                        avatar: res.user_avatar,
+                        content: cont,
+                        type: type
+                    });
+                    this.OpenCommentList.push({
+                        nickname: res.username,
+                        uid: res.uid,
+                        content: cont,
+                        type: type,
+                        avatar: res.user_avatar,
+                        user_type: res.user_type
+                    });
+                    if (res.uid === this.userInfo.uid) {
+                        this.isDown = true;
+                        this.userInfo.gold_num = this.userInfo.gold_num - gift.live_gift_price * res.live_gift_num;
+                    }
+                },
+                // 赠送
+                giveGift: function () {
+                    var data = {
+                        type: 'live_reward',
+                        uid: this.userInfo.uid,
+                        live_gift_id: this.giftOn.id,
+                        live_gift_num: this.giftNumSelected,
+                        live_id: window.room,
+                        special_id: this.liveInfo.special_id
+                    };
+                    if (!this.userInfo.gold_num) {
+                        return this.msg('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                    }
+                    if (this.giftNumSelected * this.giftOn.live_gift_price > this.userInfo.gold_num) {
+                        return this.msg('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                    }
+                    this.giftShow = false;
+                    socket.ws.send(JSON.stringify(data));
+                },
+                // 获取榜单
+                getRankList: function () {
+                    var that = this;
+                    that.loadings = true;
+                    store.basePost($h.U({ c: 'live', a: 'get_live_reward' }), {uid: that.userInfo.uid, live_id: that.liveInfo.id}, function (res) {
+                        var list = res.data.data.list;
+                        that.loadings = false;
+                        if (!list.length) {
+                            return;
+                        }
+                        that.rankList = list;
+                    }, function (res) {
+                        that.loadings = false;
+                        that.msg(res.data.data.msg);
+                    });
+                },
+                // 获取主播推荐
+                getRecomList: function () {
+                    var that = this;
+                    that.loadings = true;
+                    store.baseGet($h.U({ c: 'live', a: 'live_goods_list', q: {live_id: that.liveInfo.id}}), function (res) {
+                        var list = res.data.data.list;
+                        that.loadings = false;
+                        if (!list.length) {
+                            return;
+                        }
+                        that.recomList = list;
+                    }, function (res) {
+                        that.loadings = false;
+                        that.msg(res.data.data.msg);
+                    });
+                },
+                // 获取打赏礼物
+                getGiftList: function () {
+                    var that = this;
+                    store.baseGet($h.U({ c: 'live', a: 'live_gift_list' }), function (res) {
+                        var list = res.data.data;
+                        if (!list.length) {
+                            return;
+                        }
+                        list.forEach(function (value) {
+                            value.live_gift_num.reverse();
+                        });
+                        that.giftList = list;
+                        that.giftOn = list[0];
+                    }, function (res) {
+                        that.msg(res.msg);
+                    });
+                },
+                // 创建表情包面板
+                createEmojiSwiper: function () {
+                    new Swiper('#emoji', {
+                        observer: true,
+                        observeParents: true,
+                        pagination: {
+                            el: '#emoji-pagination'
+                        }
+                    });
+                },
+                // 创建打赏礼物面板
+                createGiftSwiper: function () {
+                    new Swiper('#gift', {
+                        observer: true,
+                        observeParents: true,
+                        pagination: {
+                            el: '#gift-pagination'
+                        }
+                    });
+                },
+                play_audio: function (item, index, name) {
+                    var that = this;
+                    var is_play = item.is_play === undefined ? true : !item.is_play;
+                    $.each(that[name], function (key, item) {
+                        if (index != key) {
+                            item.is_play = false;
+                            if (item.audio && !item.audio.paused) item.audio.pause();
+                            item.audio = null;
+                        };
+                    });
+                    this.$set(that, name, this[name]);
+                    mapleWx($jssdk(), function () {
+
+                    })
+                    if (is_play) {
+                        audio = new Audio(item.content);
+                        audio.load();
+                        audio.preload = 'none';
+                        var plalyPromis = audio.play();
+                        if (plalyPromis !== null)
+                            plalyPromis.catch(function () {
+                                audio.play();
+                            })
+                        document.addEventListener('DOMContentLoaded', function () {
+                            function audioAutoPlay() {
+                                audio.play();
+                                document.addEventListener("WeixinJSBridgeReady", function () {
+                                    audio.play();
+                                }, false);
+                            }
+                            audioAutoPlay();
+                        });
+
+                        audio.addEventListener('ended', function () {
+                            that.$set(that[name][index], 'is_play', false);
+                        });
+                    }
+                    this.$set(this[name][index], 'is_play', is_play);
+                    this.$set(this[name][index], 'audio', audio);
+                },
+                msg: function (err, success) {
+                    layer.open({ content: err, skin: 'msg', time: 2, success: success });
+                },
+                layerLoading: function (type, content) {
+                    type = type == undefined ? 2 : type;
+                    this.layerIndex = layer.open({ type: type, content: content });
+                },
+                layerLoadClose: function () {
+                    layer.close(this.layerIndex);
+                },
+                // 获取聊天内容
+                getOpenCommtList: function () {
+                    // var that = this;
+                    // if (that.Oloading || that.Oloadend) {
+                    //     return;
+                    // }
+                    // that.Oloading = true;
+                    // store.baseGet($h.U({ c: 'live', a: 'get_open_comment_list', q: { page: that.Opage, limit: that.Olimit, live_id: that.liveInfo.id, add_time: OpenCommentTime } }), function (res) {
+                    //     res = res.data.data.list;
+                    //     that.Oloading = false;
+                    //     res.forEach(value => {
+                    //         if (value.type == 1) {
+                    //             value.content = that.replace_em(value.content);
+                    //         }
+                    //         that.OpenCommentList.unshift(value);
+                    //     });
+                    //     setTimeout(function () {
+                    //         if (that.Opage++ == 1) {
+                    //             that.countRoomUser();
+                    //             that.isDown = true;
+                    //         }
+                    //     }, 1500);
+                    //     that.Oloadend = res.length < that.Olimit;
+                    // }, function (res) {
+                    //     that.Oloading = false;
+                    // });
+                    var vm = this;
+                    if (vm.Oloadend) {
+                        return;
+                    }
+                    store.baseGet($h.U({
+                        c: 'live',
+                        a: 'get_open_comment_list',
+                        q: {
+                            page: vm.Opage,
+                            limit: vm.Olimit,
+                            live_id: vm.liveInfo.id,
+                            add_time: OpenCommentTime
+                        }
+                    }), function (res) {
+                        var list = res.data.data.list;
+                        vm.OscrollHeight = vm.$refs.chat.scrollHeight;
+                        list.forEach(function (item) {
+                            if (item.type == 1) {
+                                item.content = vm.replace_em(item.content);
+                            }
+                            vm.OpenCommentList.unshift(item);
+                        });
+                        vm.$nextTick(function () {
+                            for (var i = vm.$refs.chat.getElementsByTagName('img').length; i--;) {
+                                vm.$refs.chat.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                    vm.$refs.chat.scrollTop = vm.$refs.chat.scrollHeight - vm.OscrollHeight;
+                                });
+                            }
+                        });
+                        if (vm.Opage == 1) {
+                            vm.countRoomUser();
+                        }
+
+                        vm.Oloadend = vm.Olimit > list.length;
+                        if (!vm.Oloadend) {
+                            vm.Opage++;
+                        }
+                    }, function (err) {
+                        console.log(err);
+                    });
+                },
+                // 获取课堂内容
+                getCommentList: function () {
+                    // var that = this;
+                    // if (that.loading) return;
+                    // if (that.loadend) return;
+                    // that.loading = true;
+                    // that.loadTitle = '';
+                    // store.baseGet($h.U({ c: 'live', a: 'get_comment_list', q: { page: that.page, limit: that.limit, live_id: that.liveInfo.id, add_time: CommentTime } }), function (res) {
+                    //     that.loading = false;
+                    //     var list = res.data.data.list;
+                    //     res = res.data.data.list;
+                    //     $.each(list, function (index, item) {
+                    //         if (item.type == 1) item.content = that.replace_em(item.content);
+                    //         that.CommentList.push(item);
+                    //     });
+                    //     if (that.page == Math.ceil(CommentCount / this.limit)) that.isAnimate = true;
+                    //     that.page++;
+                    //     that.$set(that, 'CommentList', that.CommentList);
+                    //     that.loadend = list.length < that.limit;
+                    //     that.loadTitle = that.loadend ? '已全部加载' : '点击加载更多';
+                    //     if (!list.length) {
+                    //         return;
+                    //     }
+                    //     that.anchor = {};
+                    //     for (const key in list[0]) {
+                    //         if (list[0].hasOwnProperty(key)) {
+                    //             that.anchor[key] = list[0][key];
+                    //         }
+                    //     }
+                    //     that.anchor.type = 1;
+                    // }, function (res) {
+                    //     that.loading = false;
+                    //     that.loadTitle = '点击加载更多';
+                    // });
+                    var vm = this;
+                    if (vm.loadend) {
+                        return;
+                    }
+                    store.baseGet($h.U({
+                        c: 'live',
+                        a: 'get_comment_list',
+                        q: {
+                            page: vm.page++,
+                            limit: vm.limit,
+                            live_id: vm.liveInfo.id,
+                            add_time: CommentTime
+                        }
+                    }), function (res) {
+                        var list = res.data.data.list;
+                        vm.loadend = vm.limit > list.length;
+                        vm.scrollHeight = vm.$refs.lesson.scrollHeight;
+                        list.forEach(function (item) {
+                            if (item.type == 1) {
+                                item.content = vm.replace_em(item.content);
+                            }
+                            vm.CommentList.unshift(item);
+                        });
+                        vm.$nextTick(function () {
+                            for (var i = vm.$refs.lesson.getElementsByTagName('img').length; i--;) {
+                                vm.$refs.lesson.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                    vm.$refs.lesson.scrollTop = vm.$refs.lesson.scrollHeight - vm.scrollHeight;
+                                });
+                            }
+                        });
+                    }, function (err) {
+                        console.log(err);
+                    });
+                },
+                //滑动底部加载
+                bScrollInit: function (Fnname) {
+                    var that = this;
+                    $h.EventUtil.listenTouchDirection(document, false, false, false, function () {
+                        that[Fnname] && that[Fnname]();
+                    }, false);
+                },
+                wechatUploadImg: function (wxApi, count, successCallback, errorCallback) {
+                    var that = this;
+                    wxApi.chooseImage({ count: count, sizeType: ['compressed'] }, function (localIds) {
+                        that.layerLoading(2, '图片上传中...');
+                        wxApi.uploadImage(localIds, function (serverIds) {
+                            store.baseGet($h.U({ c: 'public_api', a: 'wechat_media_id_by_image', p: { mediaIds: serverIds } }), function (res) {
+                                that.layerLoadClose();
+                                if (!res.data.data) {
+                                    that.msg('请选择上传图片!');
+                                    errorCallback && errorCallback(err);
+                                    return;
+                                }
+                                successCallback && successCallback(res.data.data);
+                            }, function (res) {
+                                that.layerLoadClose();
+                                that.msg('上传失败!');
+                                errorCallback && errorCallback(err);
+                            });
+                        })
+                    });
+                },
+                //发送图文消息处理
+                push: function () {
+                    var that = this;
+                    if (that.is_ban) return that.msg('您已被禁言！');
+                    if (this.content) {
+                        that.sendMessage(this.content, 1);
+                    } else {
+                        //发送图片微信端
+                        if (isWechat) {
+                            mapleWx($jssdk(), function () {
+                                that.wechatUploadImg(this, 1, function (res) {
+                                    that.sendMessage(res[0], 2);
+                                    that.isAnimate = true;
+                                });
+                            });
+                        } else {
+                            //其他端
+                            if (!$('.images').length) $('body').append('<input type="file" name="images" style="display: none" class="images">');
+                            $('.images').click();
+                        }
+                    }
+                },
+                /*
+                *获取直播间人数
+                * */
+                countRoomUser: function () {
+                    var joint = '{"type":"room_user_count","uid":' + window.uids + ',"room":' + window.room + '}';
+                    if (socket && socket.ws && socket.ws.readyState == 1) {
+                        socket.ws.send(joint);
+                    }
+                },
+                /*
+                * 本人撤回消息
+                * */
+                recall: function (id, indexList) {
+                    var that = this;
+                    layer.open({
+                        content: '是否要撤回此消息？'
+                        , btn: ['是的', '不要']
+                        , yes: function (index) {
+                            socket.ws.send('{"room":' + that.liveInfo.id + ',"type":"recall","id":' + id + '}');
+                            that.CommentList.splice(indexList, 1);
+                            $.each(that.OpenCommentList, function (indexs, item) {
+                                if (item != undefined && item.id == id) that.OpenCommentList.splice(indexs, 1);
+                            });
+                            layer.close(index);
+                            that.$set(that, 'CommentList', that.CommentList);
+                            that.$set(that, 'OpenCommentList', that.OpenCommentList);
+                        }
+                    });
+                },
+                /*
+                * socket回撤直播间消息回调
+                * */
+                CommentRecall: function (id) {
+                    var that = this;
+                    $.each(this.CommentList, function (index, item) {
+                        if (item.id == id) that.CommentList.splice(index, 1);
+                    });
+                    $.each(this.OpenCommentList, function (index, item) {
+                        if (item.id == id) that.OpenCommentList.splice(index, 1);
+                    });
+                    this.OpenCommentCount--;
+                    that.$set(that, 'CommentList', that.CommentList);
+                    that.$set(that, 'OpenCommentList', that.OpenCommentList);
+                },
+                //  更新直播间在线人数和欢迎回调
+                setUserCount: function (onLine_user_count, notice_content, user_type) {
+                    var anchor = this.anchor,
+                        obj = null;
+                    this.UserSum = onLine_user_count;
+                    this.notice = notice_content;
+                    if (anchor && typeof anchor === 'object') {
+                        obj = {};
+                        for (const key in anchor) {
+                            if (anchor.hasOwnProperty(key)) {
+                                obj[key] = anchor[key];
+                            }
+                        }
+                        obj.content = notice_content;
+                        this.OpenCommentList.push(obj);
+                    }
+                },
+                // 用户禁言回调
+                setBanUser: function (value) {
+                    this.is_ban = value;
+                },
+                // 设置聊天和课堂内容
+                setCommentArea: function (content, type, toUserInfo, user_type, id) {
+                    var vm = this;
+                    switch (user_type) {
+                        case 0: case 1:
+                            this.CommentList.push({
+                                nickname: toUserInfo.nickname,
+                                uid: toUserInfo.uid,
+                                content: type == 1 ? this.replace_em(content) : content,
+                                type: type,
+                                avatar: toUserInfo.avatar,
+                                user_type: user_type,
+                                id: id
+                            });
+                            this.$nextTick(function () {
+                                for (var i = this.$refs.lesson.getElementsByTagName('img').length; i--;) {
+                                    this.$refs.lesson.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                        vm.$refs.lesson.scrollTop = vm.$refs.lesson.scrollHeight - vm.$refs.lesson.offsetHeight;
+                                    });
+                                }
+                            });
+                            break;
+                        default:
+                            this.BarrageList.push({
+                                avatar: toUserInfo.avatar,
+                                content: type == 1 ? this.replace_em(content) : content,
+                                type: type
+                            });
+                            this.$set(this, 'BarrageList', this.BarrageList);
+                            break;
+                    }
+                    this.OpenCommentList.push({
+                        nickname: toUserInfo.nickname,
+                        uid: toUserInfo.uid,
+                        content: type == 1 ? this.replace_em(content) : content,
+                        type: type,
+                        avatar: toUserInfo.avatar,
+                        user_type: user_type,
+                        id: id
+                    });
+                    this.$nextTick(function () {
+                        for (var j = this.$refs.chat.getElementsByTagName('img').length; j--;) {
+                            this.$refs.chat.getElementsByTagName('img')[j].addEventListener('load', function () {
+                                vm.$refs.chat.scrollTop = vm.$refs.chat.scrollHeight - vm.$refs.chat.offsetHeight;
+                            });
+                        }
+                    });
+                    this.isDown = true;
+                    this.OpenCommentCount++;
+                },
+                /*
+                * 发送消息
+                * */
+                sendMessage: function (content, type) {
+                    var that = this;
+                    if (that.is_SendOut === false) return that.msg('您发送消息过于频繁！');
+                    that.isAnimate = true;
+                    var cd = that.cd;
+                    var index = setInterval(function () {
+                        cd--;
+                        if (cd <= 0) {
+                            clearInterval(index);
+                            that.is_SendOut = true;
+                        }
+                    }, 1000);
+                    that.content = '';
+                    socket.sendOut();
+                    socket.ws.send('{"room":' + this.liveInfo.id + ',"uid":' + window.uids + ',"content":"' + content + '","ms_type":"' + type + '","type":"send"}');
+                },
+                KeyboardStatus: function () {
+                    var winHeight = $(window).height(), that = this, interval = null, bfscrolltop = document.body.scrollTop;;   //获取当前页面高度
+                    if (phone_type == 2) {
+                        $(window).resize(function () {
+                            var thisHeight = $(this).height();
+                            if (winHeight - thisHeight > 50) {
+                                //当软键盘弹出，在这里面操作
+                                that.emojiShow = false;
+                            } else {
+                                //当软键盘收起，在此处操作
+
+                            }
+                        });
+                        $(that.$refs.input).keydown(function (event) {
+                            if (event.keyCode == 13 && that.content) {
+                                that.sendMessage($(that.$refs.input).val(), 1);
+                                that.$refs.input.blur();
+                            }
+                        }).focus(function (e) {
+                            that.isAnimate = true;
+                            document.body.scrollTop = document.body.scrollHeight;
+                            that.focusInput(e);
+                        })
+                    } else if (phone_type == 1) {
+                        $(that.$refs.input).focus(function (e) {
+                            that.isAnimate = true;
+                            that.$nextTick(function () {
+                                that.emojiShow = false;
+                            })
+                            interval = setInterval(function () {
+                                document.documentElement.scrollTop = $("#app").height();
+
+                            }, 100)
+                        }).blur(function () {
+                            clearInterval(interval);
+                            document.documentElement.scrollTop = $("#app").height();
+                        })
+                    }
+
+                    $(that.$refs.input).keydown(function (event) {
+                        if (event.keyCode == 13 && that.content) {
+                            that.sendMessage($(that.$refs.input).val(), 1);
+                            that.$refs.input.blur();
+                        }
+                    });
+                    $(that.$refs.chatList).click(function (event) {
+                        event.stopPropagation();
+                        if (that.emojiShow) that.emojiShow = false;
+                    })
+                    $(that.$refs.chat).click(function (event) {
+                        event.stopPropagation();
+                        if (that.emojiShow) that.emojiShow = false;
+                    })
+
+                },
+                changeContent: function (e) {
+                    // this.msg(e.value);
+                },
+                focusInput: function (obj) {
+                    var isAndroid = navigator.userAgent.indexOf('Android') > -1 || navigator.userAgent.indexOf('Adr') > -1;
+                    var isIos = !!navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+                    if (isAndroid) {
+                        window.addEventListener('resize', () => {
+                            if (document.activeElement.tagName == 'INPUT') {
+                                window.setTimeout(() => {
+                                    document.activeElement.scrollIntoViewIfNeeded()
+                                }, 0)
+                            }
+                        })
+                    } else if (isIos) {
+                        // 使用定时器是为了让输入框上滑时更加自然
+                        var input_demo = document.getElementsByTagName('input')[0];
+                        setTimeout(function () {
+                            input_demo.scrollIntoViewIfNeeded();
+                            document.activeElement.scrollIntoViewIfNeeded()
+                        }, 100);
+                        // $('.footer').css('position','relative');
+                        window.addEventListener('focusin', () => {
+                            scrollTops = document.body.scrollHeight;
+                        })
+                        window.addEventListener('focusout', () => {
+                            window.scrollTo(0, 0);
+                        })
+                        $(this.$refs.chat).animate({ scrollTop: $(this.$refs.chat).scrollTop() + 300 }, 300);
+                    }
+                },
+                changeText: function (e) {
+                    var input = this.$refs.input;
+                    input.focus();
+                    //input.scrollTop = input.scrollHeigHt;
+                },
+                mine: function (item) {
+                    this.$refs.input.value += item.type;
+                    this.content = this.$refs.input.value;
+                },
+                /*
+                * 替换表情
+                * */
+                replace_em: function (str) {
+                    str = str.replace(/\</g, '&lt;');
+                    str = str.replace(/\>/g, '&gt;');
+                    str = str.replace(/\n/g, '<br/>');
+                    str = str.replace(/\[qq_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji1/$1.gif' />");
+                    str = str.replace(/\[em_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji2/$1.png'  />");
+                    str = str.replace(/\[other_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji3/$1.png' />");
+                    return str;
+                },
+                delEmoji: function () {
+                    this.content = this.content.substring(0, this.content.length - 1);
+                },
+                /*
+                * 播放器错误事件处理
+                *
+                * */
+                bindEvevt: function () {
+                    var that = this;
+                    this.player.on('onM3u8Retry', function () {
+                        if (that.player) that.player.dispose();
+                        that.live_error = '主播暂时离开，请稍后.';
+                        that.live_status = -1;
+
+                    });
+                    this.player.on('liveStreamStop', function () {
+                        that.live_error = '直播失败或直播已结束';
+                        that.live_status = -1;
+                        if (that.player) that.player.dispose();
+                    });
+                    this.player.on('error', function (e) {
+                        //隐藏
+                        $('.prism-ErrorMessage').hide();
+                        //解析
+                        var errorData = e.paramData;
+
+                        that.live_error = '直播失败或直播已结束';
+                        that.live_status = -1;
+                        if (that.player) that.player.dispose();
+                    });
+                },
+                touchmoveDefault: function (e) {
+                    e.preventDefault();
+                },
+                start(e) {
+                    var that = this;
+                    if (this.timeOutEvent) clearTimeout(this.timeOutEvent);
+                    if (this.autoCloseRecord) clearInterval(this.autoCloseRecord);
+                    this.longClick = 0;
+                    this.starttime = new Date().getTime();
+                    this.autoCloseRecord = setInterval(function () {
+                        that.timeEnd--;
+                        if (that.timeEnd === 10) that.showTimer = true;
+                        if (that.timeEnd === 0) that.end(e);
+                    })
+                    this.timeOutEvent = setTimeout(function () {
+                        e.preventDefault();
+                        that.longClick = 1;
+                        if (isWechat) {
+                            mapleWx($jssdk(), function () {
+                                this.startRecord();
+                            });
+                        }
+                    }, 500);
+                    that.speak = '松开 结束';
+                    that.recording = true;
+                    return false;
+                },
+                move(e) {
+                    this.timeOutEvent = 0;
+                    e.preventDefault();
+                },
+                end(e) {
+                    var that = this;
+                    this.msg('333');
+                    clearInterval(that.autoCloseRecord);
+                    this.endtime = new Date().getTime();
+                    if ((this.endtime - this.starttime) < 2) {
+                        this.endtime = 0;
+                        this.starttime = 0;
+                        clearTimeout(this.timeOutEvent);
+                        that.msg('说话时间太短');
+                        mapleWx($jssdk(), function () {
+                            this.stopRecord();
+                        })
+                    } else {
+                        mapleWx($jssdk(), function () {
+                            var wx = this;
+                            this.stopRecord(function (localId, res) {
+                                wx.uploadVoice(localId, function (serverId) {
+                                    store.basePost($h.U({ c: 'live', a: 'upload_voice' }), { server_id: serverId }, function (res) {
+                                        socket.ws.send('{"room":' + that.liveInfo.id + ',"content":"' + Ks3Host + '/' + res.data.data.url + '","ms_type":3,"type":"send"}');
+                                    });
+                                }, 0)
+                            });
+                        })
+                    }
+                    e.preventDefault();
+                    this.speak = '按住 结束';
+                    this.recording = false;
+                    return false;
+                },
+                voiceBnt: function () {
+                    this.emojiShow = false;
+                    if (this.voice == true) {
+                        this.voice = false;
+                        this.$nextTick(function () {
+                            this.$refs.input.focus();
+                        });
+                    } else {
+                        this.voice = true;
+                    }
+                },
+                emoticon: function () {
+                    var that = this;
+                    this.voice = false;
+                    if (this.emojiShow == true) {
+                        this.emojiShow = false;
+                        this.$nextTick(function () {
+                            that.$refs.input.focus();
+                        })
+                    } else {
+                        this.emojiShow = true;
+                        this.$nextTick(function () {
+                            that.$refs.input.blur();
+                        });
+                    }
+                },
+                openBarrage: function () {
+                    this.barrage = !this.barrage
+                },
+                openDiscuss: function () {
+                    this.discuss = true;
+                    $(this.$refs.chatlist).css({ overflow: 'hidden' });
+                },
+                closeDiscuss: function () {
+                    this.discuss = false;
+                    $(this.$refs.chatlist).css({ overflow: 'auto' });
+                },
+                changLive: function (type, pullUrl) {
+                    //销毁播放器
+                    var that = this;
+                    if (this.player) this.player.dispose();
+                    if (type) {
+                        this.liveInfo.is_play = 1;
+                        this.PullUrl = pullUrl;
+                        this.$nextTick(function () {
+                            that.player = new Aliplayer({
+                                id: 'J_prismPlayer',
+                                width: '100%',
+                                height: '100%',
+                                autoplay: false,
+                                isLive: true,
+                                source: pullUrl,
+                            }, function (player) {
+                                console.log('播放器创建好了。')
+                            });
+                            this.$nextTick(function () {
+                                $('#J_prismPlayer').css({ height: '4.22rem' });
+                            });
+                            that.bindEvevt();
+                        })
+                    } else {
+                        this.PullUrl = false;
+                        this.live_status = 1;
+                        this.$set(this.liveInfo, 'is_play', 0);
+                        this.$nextTick(function () {
+                            $(that.$refs.column).css({ height: 'auto' });
+                        });
+                    }
+                }
+            }
+        });
+    });
+</script>
+{/block}

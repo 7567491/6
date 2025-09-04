@@ -1,0 +1,112 @@
+{extend name="public/container"}
+{block name="title"}讲师列表-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main">
+    <div class="wy-block">
+        <div class="wy-block-container">
+            <div class="result-top">
+                <h2 class="result-title">讲师列表</h2>
+                <div class="result-desc">
+                    共<em>{$count}</em>位讲师
+                </div>
+            </div>
+            <div class="sec-wrapper">
+                <div class="sec-bd">
+                    {volist name='teachers' id='item'}
+                    <a href="{:url('/view-teacher/'.$item.id)}" class="teacher-item">
+                        <div class="teacher-item-top">
+                            <div class="teacher-avatar">
+                                <img title="{$item.lecturer_name}" alt="{$item.lecturer_name}" src="{:get_image_src($item.lecturer_head)}">
+                            </div>
+                            <div class="teacher-info">
+                                <div class="teacher-name">{$item.lecturer_name}</div>
+                                <div class="teacher-label">
+                                    {foreach $item.label as $item_key=>$label}
+                                    <div class="teacher-label-item">
+                                        {$label}
+                                    </div>
+                                    {/foreach}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="teacher-item-bottom">
+                            {$item.explain}
+                        </div>
+                    </a>
+                    {/volist}
+                </div>
+            </div>
+            <div class="init-pagination">
+                {$teachers->render()}
+            </div>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_header/index',
+        'components/base_footer/index',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/auth',
+        'scripts/util',
+        'css!styles/instructorList.css'
+    ], function (Vue, ELEMENT, BaseHeader, BaseFooter, BaseLogin, BaseAgree, baseMixin, routerMixin, authApi, util) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-header': BaseHeader,
+                'base-footer': BaseFooter,
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                paginationData: {
+                    pageSize: 16,
+                    pageNum: 1
+                },
+                total: 0,
+                lecturerList: []
+            },
+            created: function () {
+                this.lecturer_list();
+            },
+            methods: {
+                // 讲师列表
+                lecturer_list: function () {
+                    authApi.lecturer_list({
+                        page: this.paginationData.pageNum,
+                        limit: this.paginationData.pageSize
+                    }).then(function (res) {
+                        vm.total = res.data.count;
+                        vm.lecturerList = res.data.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 分页
+                handleCurrentChange(val) {
+                    this.paginationData.pageNum = val;
+                    this.lecturer_list();
+                },
+                // 跳转到详情页
+                handleSelectDetils: function (id) {
+                    window.location.href = this.router.teacher_detail + '?id=' + id;
+                }
+            }
+        });
+    });
+</script>
+{/block}

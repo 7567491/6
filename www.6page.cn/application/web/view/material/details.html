@@ -1,0 +1,262 @@
+{extend name="public/container"}
+{block name="title"}{$data.title}-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main course-detail virtual-detail">
+    <div class="banner-wrap">
+        <div class="course-banner--pay">
+            <div class="course-banner-bg" style="background-image:url({:str_replace('\\\\','/',get_image_src($data.image))})"></div>
+            <div class="course-banner-hd">
+                <div class="breadcrumb">
+                    <a href="{:url('/virtual')}">全部</a>
+                    <span><i class="el-icon-arrow-right"></i></span>
+                    <a href="javascript:;" rel="nofollow">{$data['category']['title']}</a>
+                    <span><i class="el-icon-arrow-right"></i></span>
+                    <a href="javascript:;" rel="nofollow">{$data['title']}</a>
+                </div>
+                <div class="section-corner">
+                    <button type="button" class="btn-fav" @click="collect">
+                        <span class="icon-fav" style="font-size:16px">
+                            <i class="el-icon-star-off"></i> {$data.collect ? '已收藏': '收藏'}
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <div class="course-banner-inner">
+                <div class="course-banner-row">
+                    <div class="section-left">
+                        <div class="cover-pay-wrapper" style="background-image:url({:str_replace('\\\\','/',get_image_src($data.image))})"></div>
+                    </div>
+                    <div class="section-right">
+                        <h3 class="course-title">{$data['title']}</h3>
+                        <ul class="course-labels">
+                            <li class="ke-btn course-label">
+                                <a href="javascript:;" rel="nofollow">{$data.category.title}</a>
+                            </li>
+                        </ul>
+                        <p class="course-hints">
+                            <span>
+                                {$data.add_time}
+                            </span>
+                            <span>
+                                <span class="num">{$data.ficti + $data.sales}</span>人已下载人
+                            </span>
+                        </p>
+                        {eq name="data.pay_type" value="0"}
+                        <div class="virtual-price">
+                            <span class="virtual-normal-price">免费</span>
+                        </div>
+                        {else /}
+                        <div class="virtual-price">
+                            <span class="virtual-normal-price"><em>¥</em>{$data.money}</span>
+                            <span class="kc-vip-price">
+                                <span class="kc-vip-label">VIP</span>
+                                <span class="kc-vip-num">{$data.member_money > 0 ? '¥'.$data.member_money: '免费'}</span>
+                            </span>
+                        </div>
+                        {/eq}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section-main">
+        <div class="detail js-hook-detail">
+            <div class="course-detail">
+                {$data.abstract}
+            </div>
+        </div>
+        <aside>
+            <div class="agency-info">
+                <div class="agency-info-inner">
+                    <h3 class="virtual-right-info">资源信息</h3>
+                    <div class="virtual-right-price">
+                        {eq name="data.pay_type" value="0"}
+                        <div class="vr-price-item">
+                            <div class="vr-price-label">价格</div>
+                            <span class="vr-price">免费</span>
+                        </div>
+                        {else /}
+                        <div class="vr-price-item">
+                            <div class="vr-price-label">普通会员</div>
+                            <span class="vr-price"><em>¥</em>{$data.money}</span>
+                        </div>
+                        <div class="vr-price-item">
+                            <div class="vr-price-label">VIP会员</div>
+                            <span class="vr-price">{$data.member_money > 0 ? '¥'.$data.member_money: '免费'}</span>
+                        </div>
+                        {/eq}
+                    </div>
+                    <div class="virtual-buy">
+                        {if condition="(!$data.pay_type) OR ($data.isPay) OR (!$data.member_pay_type AND $data.is_member)"}
+                        <button class="wy-btn-small" @click="download">立即下载</button>
+                        {else /}
+                        <button class="wy-btn-small" @click="buy">立即购买</button>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+            {neq name="recommend_list" value="0"}
+            <div class="recommend">
+                <div class="recommend-box">
+                    <div class="recommend-tt">相关推荐</div>
+                    <ul class="course-list agency">
+                        {foreach $recommend_list as $key=>$item}
+                        <li>
+                            <section class="course-card-expo-wrapper">
+                                <a class="kc-course-card" href="{:url('/view-virtual/'.$item.id)}">
+                                    <div class="kc-course-card-cover" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                    <div class="kc-course-card-content">
+                                        <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                        <div class="kc-course-card-footer">
+                                            <div class="kc-coursecard-footer-left">
+                                                <span class="kc-course-card-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    <span>免费</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    <span>加密</span>
+                                                    {/eq}
+                                                </span>
+                                                <span class="kc-course-card-student">{$item.ficti+$item.sales}次下载</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </section>
+                        </li>
+                        {/foreach}
+                    </ul>
+                </div>
+            </div>
+            {/neq}
+        </aside>
+    </div>
+</div>
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+<!-- 网盘下载弹窗 -->
+<el-dialog :visible.sync="diskVisible" title="资源下载" width="560px" custom-class="disk-dialog">
+    <div class="virtual-download-box">
+        <div class="virtual-download-item" v-if="!is_network_disk">
+            <div class="vd-item-label">本地下载</div>
+            <div class="vd-item-download">
+                <el-button size="small" @click="down" icon="el-icon-download">点击下载</el-button>
+            </div>
+        </div>
+        <div class="virtual-download-item">
+            <div class="vd-item-label">网盘下载</div>
+            <div class="vd-item-download">
+                <div>网盘链接：<a :href="network_disk_link" target="_blank">{{ network_disk_link }}</a></div>
+                <div>提取码：{{ network_disk_pwd }}</div>
+            </div>
+        </div>
+    </div>
+</el-dialog>
+{include file='public/footer' /}
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'api/home',
+        'api/material',
+        'scripts/util',
+        'mixins/base',
+        'mixins/router'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, homeApi, materialApi, util, baseMixin, routerMixin) {
+        Vue.use(ELEMENT);
+        var virtual_id = {$data.id};
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                id: 0,
+                details: {
+                    image: ''
+                },
+                is_network_disk: 0,
+                link: '',
+                network_disk_link: '',
+                network_disk_pwd: '',
+                diskVisible: false
+            },
+            created: function () {
+                this.id = virtual_id;
+            },
+            methods: {
+                // 收藏
+                collect: function () {
+                    homeApi.user_login().then(function () {
+                        materialApi.collect({
+                            id: virtual_id
+                        }).then(function (res) {
+                            vm.details.collect = !vm.details.collect;
+                            vm.$message.success(vm.details.collect ? '收藏成功' : '取消收藏成功');
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 下载
+                download: function () {
+                    homeApi.user_login().then(function () {
+                        materialApi.get_data_download_link({
+                            id: vm.id,
+                            isPay: true
+                        }).then(function (res) {
+                            vm.is_network_disk = res.data.is_network_disk;
+                            vm.link = res.data.link;
+                            vm.network_disk_link = res.data.network_disk_link;
+                            vm.network_disk_pwd = res.data.network_disk_pwd;
+                            if (vm.is_network_disk) {
+                                vm.activeName = 'second';
+                            }
+                            vm.diskVisible = true;
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                            vm.loginOpen()
+                        });
+                    });
+                },
+                // 直接下载
+                down: function () {
+                    materialApi.user_download({
+                        id: this.id
+                    }).then(function () {
+                        vm.details.sales++;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                    window.open(vm.link);
+                },
+                // 购买
+                buy: function () {
+                    homeApi.user_login().then(function () {
+                        window.location.href = vm.router.payment + '?type=0&id=' + virtual_id;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

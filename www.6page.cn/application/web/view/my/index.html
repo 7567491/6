@@ -1,0 +1,182 @@
+
+{extend name="public/container"}
+{block name="title"}个人中心-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="user-center">
+    <div class="user-center-top">
+        <div class="user-center-inner">
+            <div class="user-center-left">
+                <div class="uc-avatar">
+                    <img :src="fx_cdn_img(userInfo.avatar)" width="100%" :title="userInfo.nickname" :alt="userInfo.nickname" />
+                </div>
+
+                <div class="uc-info">
+                    <div class="uc-name">{{userInfo.nickname}}</div>
+                    <div class="uc-total">
+                        {foreach $userCenterNumList as $key=>$item}
+                        <div class="uc-total-item">
+                            <div class="uc-total-num">{$item}</div>
+                            <div class="uc-total-label">{$key}</div>
+                        </div>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            <div class="user-center-right" :class="{'no-vip': !userInfo.level}" v-if="isMemeberOn">
+                <div class="uc-vip-top">
+                    我的权益
+                    <span v-if="userInfo.level && !userInfo.is_permanent">VIP到期时间：{{ userInfo.overdue_time }}</span>
+                    <span v-else-if="userInfo.level && userInfo.is_permanent">永久VIP</span>
+                    <span v-else-if="!userInfo.level && userInfo.member_time">VIP已过期</span>
+                    <span v-else>未开通VIP</span>
+                    <a v-if="!userInfo.level" href="{:url('/my')}?page=member">去开通<i class="el-icon-arrow-right"></i></a>
+                </div>
+                <div class="uc-vip-special">
+                    <div class="uc-vip-special-item" v-for="item in vipRights" :key="item.id">
+                        <div class="uc-si-icon">
+                            <img :src="fx_cdn_img(item.pic)" />
+                        </div>
+                        <div class="uc-si-label">
+                            {{item.name}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="user-center-main">
+        <div class="user-center-side">
+            <el-menu
+                @select="selectMenu"
+                default-active="{$page ? $page : 'course'}"
+            >
+                <template :index="item.value" v-for="item in menus" :key="item.value">
+                    <el-menu-item v-if="item.value != 'balance' || (item.value === 'balance' && !!is_yue)" :name="item.value" :index="item.value">
+                        <i :class="['el-icon-' + item.icon]"></i>
+                        <span slot="title">{{item.name}}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+        </div>
+        <div class="user-center-content">
+            <div class="user-center-section" v-for="item in menus" :key="item.value" v-show="item.value === currentMenu">
+                <keep-alive>
+                    <component 
+                        :is="'my-' + item.value" 
+                        :is-login="isLogin"
+                        :user-info="userInfo" 
+                        :is-yue="!!is_yue" 
+                        :is-alipay="!!is_alipay" 
+                        :is-wechat="!!is_wechat" 
+                        :now-money="userInfo.now_money"
+                        :current-menu="currentMenu"
+                        @login-again="logout" 
+                        @update-user="user_info"
+                        @vip-rights="getVipRights"
+                    >
+                    </component>
+                </keep-alive>
+            </div>
+        </div>
+    </div>
+</div>
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{include file='public/footer' /}
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'components/my/account/index',
+        'components/my/course/index',
+        'components/my/member/index',
+        'components/my/balance/index',
+        'components/my/material/index',
+        'components/my/coin/index',
+        'components/my/spread/index',
+        'components/my/favor/index',
+        'components/my/exam/index',
+        'components/my/test/index',
+        'components/my/wrong/index',
+        'components/my/certificate/index',
+        'api/home',
+        'mixins/base',
+        'mixins/router',
+        'scripts/util'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, MyAccount, MyCourse, MyMember, MyBalance, MyMaterial, MyCoin, MySpread, MyFavor, MyExam, MyTest, MyWrong, MyCertificate, homeApi, baseMixin, routerMixin, util) {
+        Vue.use(ELEMENT);
+        var userCenterMenusList = {$userCenterMenusList};
+        // 判断会员充值是否开启
+        var isMemeberOn = false;
+        var if_bind_tip = {$if_bind_tip};
+        for (var i = 0; i < userCenterMenusList.length; i++) {
+            if (userCenterMenusList[i]['value'] === 'member') {
+                isMemeberOn = true;
+            }
+        }
+
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree,
+                'my-account': MyAccount,
+                'my-course': MyCourse,
+                'my-member': MyMember,
+                'my-balance': MyBalance,
+                'my-material': MyMaterial,
+                'my-coin': MyCoin,
+                'my-spread': MySpread,
+                'my-favor': MyFavor,
+                'my-test': MyTest,
+                'my-exam': MyExam,
+                'my-wrong': MyWrong,
+                'my-certificate': MyCertificate
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                is_yue: {$is_yue},
+                is_alipay: {$is_alipay},
+                is_wechat: {$is_wechat},
+                menus: userCenterMenusList,
+                currentMenu: 'course',
+                page: 'course',
+                courseTotal: 0,
+                balanceTotal: 0,
+                coinTotal: 0,
+                virtualTotal: 0,
+                favorTotal: 0,
+                vipRights: [],
+                isMemeberOn: isMemeberOn
+            },
+            created: function () {
+                var page = util.getParmas('page');
+                if (page) {
+                    this.page = page;
+                }
+                this.currentMenu = this.page
+            },
+            methods: {
+                avatarError: function (params) {
+                    return true;
+                },
+                selectMenu: function (data) {
+                    this.currentMenu = data
+                    var url = window.location.href;
+                    var newUrl = new URL(url);
+                    newUrl.searchParams.set("page", data);
+                    window.history.replaceState(null, null, newUrl.toString());
+                },
+                getVipRights: function (data) {
+                    this.vipRights = data
+                }
+            }
+        });
+    });
+</script>
+{/block}

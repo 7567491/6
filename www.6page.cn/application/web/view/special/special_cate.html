@@ -1,0 +1,451 @@
+{extend name="public/container"}
+{block name="title"}所有课程-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main">
+    <div class="wy-block block-selector">
+        <div class="wy-block-container">
+            <div class="wy-selector">
+                <div class="wy-selector-line" :class="{expand: expand1}">
+                    <div class="wy-selector-title">一级分类</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div
+                                class="wy-kc-tag"
+                                v-for="item in courseClassificationList1"
+                                :key="item.id"
+                                :class="{ active: item.id == filterData.cate_id }"
+                                @click="filterData.cate_id = item.id, filterData.subject_id = 0, filterData.search = '', isInit=false, filterData.clicked++">
+                                {{ item.name }}
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand1=!expand1">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="wy-selector-line" :class="{expand: expand2}">
+                    <div class="wy-selector-title">二级分类</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div
+                                class="wy-kc-tag"
+                                v-for="item in courseClassificationList2"
+                                :key="item.id"
+                                :class="{ active: item.id == filterData.subject_id }"
+                                @click="filterData.subject_id = item.id, filterData.search = '', isInit=false, filterData.clicked++">
+                                {{ item.name }}
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand2=!expand2">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="wy-selector-line" :class="{expand: expand3}">
+                    <div class="wy-selector-title">课程类型</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div :class="{ active: filterData.type === '' }" class="wy-kc-tag"
+                               @click="filterData.type = '', filterData.page = 1,filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">全部</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 1 }" class="wy-kc-tag"
+                               @click="filterData.type = 1, filterData.page = 1,filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">图文课</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 2 }" class="wy-kc-tag"
+                               @click="filterData.type = 2, filterData.page = 1,filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">音频课</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 3 }" class="wy-kc-tag"
+                               @click="filterData.type = 3,filterData.page = 1, filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">视频课</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 4 }" class="wy-kc-tag"
+                               @click="filterData.type = 4, filterData.page = 1,filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">直播课</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 5 }" class="wy-kc-tag"
+                               @click="filterData.type = 5,filterData.page = 1, filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">套餐课</span>
+                            </div>
+                            <div :class="{ active: filterData.type === 6 }" class="wy-kc-tag"
+                               @click="filterData.type = 6,filterData.page = 1, filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">精简课</span>
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand3=!expand3">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="wy-selector-line" :class="{expand: expand4}">
+                    <div class="wy-selector-title">报名方式</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div :class="{ active: filterData.is_pay === '' }" class="wy-kc-tag"
+                               @click="filterData.is_pay = '', filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">全部</span>
+                            </div>
+                            <div :class="{ active: filterData.is_pay === 0 }" class="wy-kc-tag"
+                               @click="filterData.is_pay = 0, filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">免费</span>
+                            </div>
+                            <div :class="{ active: filterData.is_pay === 1 }" class="wy-kc-tag"
+                               @click="filterData.is_pay = 1, filterData.search = '', isInit=false, filterData.clicked++">
+                                <span class="content_item_value">付费</span>
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand4=!expand4">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="wy-block block-list">
+        <div class="wy-block-container">
+            <div class="wy-tool-bar">
+                <div class="order-by">
+                    <div
+                        :class="{ active: sort == '' }"
+                        class="wy-tool-bar-item"
+                        @click="sort = '', filterData.scoreOrder = '', filterData.salesOrder = '', filterData.search = '', isInit=false, filterData.clicked++">
+                            <span class="wy-tool-bar-label">综合</span>
+                    </div>
+                    <div
+                        :class="{ active: sort == 'salesOrder' }"
+                        class="wy-tool-bar-item"
+                        @click="sort = 'salesOrder', isInit=false, filterData.clicked++, filterData.salesOrder = (filterData.salesOrder == 'asc' ? 'desc' : 'asc'), filterData.scoreOrder = '', filterData.search = ''">
+                            <span class="wy-tool-bar-label">销量</span>
+                            <img v-if="sort != 'salesOrder'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/1.png" alt="默认">
+                            <img v-else-if="filterData.salesOrder == 'asc'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/2.png" alt="降序">
+                            <img v-else-if="filterData.salesOrder == 'desc'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/3.png" alt="升序">
+                    </div>
+                    <div
+                        :class="{ active: sort == 'scoreOrder' }"
+                        class="wy-tool-bar-item"
+                        @click="sort = 'scoreOrder', isInit=false, filterData.clicked++, filterData.scoreOrder = (filterData.scoreOrder === 'asc' ? 'desc' : 'asc'), filterData.salesOrder = '', filterData.search = ''">
+                            <span class="wy-tool-bar-label">评价</span>
+                            <img v-if="sort != 'scoreOrder'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/1.png" alt="默认">
+                            <img v-else-if="filterData.scoreOrder == 'asc'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/2.png" alt="降序">
+                            <img v-else-if="filterData.scoreOrder == 'desc'" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/3.png" alt="升序">
+                    </div>
+                </div>
+                <div class="result-desc">
+                    共找到<em v-if="isInit">{$count}</em><em v-if="!isInit">{{total}}</em>个结果
+                </div>
+            </div>
+            <div class="sec-wrapper" v-show="isInit">
+                <div class="sec-bd">
+                    {volist name='allCourseList' id='item'}
+                    <div>
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                        <!--图文-->
+                                        {eq name="item.type" value="1"}
+                                        <div title="图文课程" class="kc-course-type"><i class="el-icon-picture-outline"></i></div>
+                                        {/eq}
+                                        <!--音频课程-->
+                                        {eq name="item.type" value="2"}
+                                        <div title="音频课程" class="kc-course-type"><i class="el-icon-headset"></i></div>
+                                        {/eq}
+                                        <!--视频课程-->
+                                        {eq name="item.type" value="3"}
+                                        <div title="视频课程" class="kc-course-type"><i class="el-icon-video-play"></i></div>
+                                        {/eq}
+                                        <!--直播课程-->
+                                        {eq name="item.type" value="4"}
+                                        <div title="直播课程" class="kc-course-type"><i class="el-icon-video-camera"></i></div>
+                                        {/eq}
+                                        <!--套餐课程-->
+                                        {eq name="item.type" value="5"}
+                                        <div title="套餐课程" class="kc-course-type"><i class="el-icon-s-operation"></i></div>
+                                        {/eq}
+                                        <!--精简课程-->
+                                        {eq name="item.type" value="6"}
+                                        <div title="精简课程" class="kc-course-type"><i class="el-icon-position"></i></div>
+                                        {/eq}
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                    <div class="kc-course-card-labels">
+                                        {foreach $item['label'] as $label_key=>$label}
+                                        <span class="kc-course-card-labels-item">{$label}</span>
+                                        {/foreach}
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                        <span class="kc-course-card-price">
+                                            <span class="kc-coursecard-price">
+                                                {eq name="item.pay_type" value="1"}
+                                                <span class="kc-coursecard-price-icon">
+                                                    <span class="coursedot">¥</span>
+                                                </span>
+                                                <span>{$item.money}</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="0"}
+                                                <span>免费</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="2"}
+                                                <span>加密</span>
+                                                {/eq}
+                                            </span>
+                                        </span>
+                                            {neq name="item.member_money" value="$item.money"}
+                                            <span class="kc-vip-price">
+                                            <span class="kc-vip-label">VIP</span>
+                                            <span class="kc-vip-num">{$item.member_money==0 ? '免费' : '¥'.$item.member_money}</span>
+                                        </span>
+                                            {/neq}
+                                            <span class="kc-course-card-student-apply-num">{$item.browse_count}人报名</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                    {/volist}
+                </div>
+            </div>
+            <div v-if="isInit" class="init-pagination">
+                {$allCourseList->render()}
+            </div>
+
+            <div class="sec-wrapper" v-show="!isInit">
+                <div class="sec-bd">
+                    <div v-for="item in courseList" :key="item.id">
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" rel="nofollow" href="javascript:;" @click="handleSelectDetils(item)">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" :style="{'background-image': 'url('+ replace_url(item.image) +')'}"></div>
+                                    <!--图文-->
+                                    <div v-if="item.type==1" title="图文课程" class="kc-course-type"><i class="el-icon-picture-outline"></i></div>
+                                    <!--音频课程-->
+                                    <div v-if="item.type==2" title="音频课程" class="kc-course-type"><i class="el-icon-headset"></i></div>
+                                    <!--视频课程-->
+                                    <div v-if="item.type==3" title="视频课程" class="kc-course-type"><i class="el-icon-video-play"></i></div>
+                                    <!--直播课程-->
+                                    <div v-if="item.type==4" title="直播课程" class="kc-course-type"><i class="el-icon-video-camera"></i></div>
+                                    <!--套餐课程-->
+                                    <div v-if="item.type==5" title="套餐课程" class="kc-course-type"><i class="el-icon-s-operation"></i></div>
+                                    <!--精简课程-->
+                                    <div v-if="item.type==6" title="精简课程" class="kc-course-type"><i class="el-icon-position"></i></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" :title="item.title">{{item.title}}</h3>
+                                    <div class="kc-course-card-labels">
+                                        <span class="kc-course-card-labels-item" v-for="label in item['label']">{{label}}</span>
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    <span class="kc-coursecard-price-icon" v-if="item.pay_type==1">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span v-if="item.pay_type==1">{{item.money}}</span>
+                                                    <span v-if="item.pay_type==0">免费</span>
+                                                    <span v-if="item.pay_type==2">加密</span>
+                                                </span>
+                                            </span>
+                                            <span class="kc-vip-price" v-if="item.member_money!=item.money">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{{item.member_money == 0 ?'免费' : '¥'+item.member_money }}</span>
+                                            </span>
+                                            <span class="kc-course-card-student-apply-num">{{item.browse_count}}人报名</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <el-empty v-if="courseList.length==0 && !isInit" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="查询结果为空～"></el-empty>
+            <div v-if="courseList.length && !isInit" class="pagination">
+                <el-pagination :current-page.sync="filterData.page" :page-size="filterData.limit"
+                               layout="prev, pager, next" :total="total">
+                </el-pagination>
+            </div>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData"
+            @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/auth',
+        'api/special',
+        'scripts/util',
+        'css!styles/classification.css'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, authApi, specialApi, util) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                isInit: true,
+                filterData: {
+                    cate_id: 0,
+                    subject_id: 0,
+                    page: 1,
+                    limit: 16,
+                    type: '',
+                    is_pay: '',
+                    salesOrder: '',
+                    scoreOrder: '',
+                    search: '',
+                    clicked: 0
+                },
+                sort: '',
+                courseClassificationList1: [
+                    {
+                        name: '全部',
+                        grade_id: 0,
+                        id: 0,
+                        children: []
+                    }
+                ],
+                courseList: [],
+                total: 0,
+                flag1: false,
+                flag2: false,
+                expand1: false,
+                expand2: false,
+                expand3: false,
+                expand4: false,
+            },
+            computed: {
+                courseClassificationList2: function () {
+                    var vm = this;
+                    var courseClassificationListItem = this.courseClassificationList1.find(function (item) {
+                        return vm.filterData.cate_id == item.id;
+                    });
+                    var result = [
+                        {
+                            name: '全部',
+                            grade_id: 0,
+                            id: 0
+                        }
+                    ];
+                    if (courseClassificationListItem) {
+                        return result.concat(courseClassificationListItem.children);
+                    }
+                    return result;
+                }
+            },
+            watch: {
+                filterData: {
+                    handler: function (newVal, oldVal) {
+                        this.get_special_list();
+                    },
+                    deep: true
+                },
+                courseClassificationList2: function () {
+                    this.flag2 = false;
+                },
+                'filterData.search': function (val) {
+                    if (!val) {
+                        this.$refs.baseHeader.searchValue = '';
+                    }
+                }
+            },
+            created: function () {
+                var search = util.getParmas('search');
+                var cate_id = util.getParmas('cate_id');
+                var subject_id = util.getParmas('subject_id');
+                this.get_all_special_cate();
+                if (search) {
+                    this.isInit = false
+                    return this.filterData.search = search;
+                }
+                if (cate_id && subject_id) {
+                    this.filterData.cate_id = cate_id;
+                    return this.filterData.subject_id = subject_id;
+                }
+                // this.get_special_list();
+            },
+            methods: {
+                // 分类
+                get_all_special_cate: function () {
+                    specialApi.get_all_special_cate().then(function (res) {
+                        vm.courseClassificationList1[0].children = res.data.children;
+                        vm.courseClassificationList1 = vm.courseClassificationList1.concat(res.data.cateogry);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 列表
+                get_special_list: function () {
+                    specialApi.get_special_list(this.filterData).then(function (res) {
+                        vm.courseList = res.data.data;
+                        vm.total = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 跳转课程详情
+                handleSelectDetils: function (item) {
+                    if (item.is_light) {
+                        window.location.href = '{:url("/single-course")}' +  '?id=' + item.id + '&from=special_cate';
+                    } else {
+                        window.location.href = '{:url("/view-course")}' + '?id=' + item.id + '&from=special_cate';
+                    }
+                },
+                // 更多
+                handleShowMoreThan: function (state) {
+                    if (state === 1) {
+                        if (this.$refs.itemContent1.scrollHeight === this.$refs.itemContent1.offsetHeight && !this.flag1) {
+                            return;
+                        }
+                        this.flag1 = !this.flag1;
+                    } else if (state === 2) {
+                        if (this.$refs.itemContent2.scrollHeight === this.$refs.itemContent2.offsetHeight && !this.flag2) {
+                            return;
+                        }
+                        this.flag2 = !this.flag2;
+                    }
+                },
+                // 搜索
+                submitSearch: function (value) {
+                    this.filterData.cate_id = 0;
+                    this.filterData.subject_id = 0;
+                    this.filterData.type = '';
+                    this.filterData.is_pay = '';
+                    this.filterData.salesOrder = '';
+                    this.filterData.scoreOrder = '';
+                    this.filterData.search = value;
+                    this.sort = '';
+                }
+            }
+        });
+    });
+</script>
+{/block}

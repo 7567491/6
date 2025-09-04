@@ -1,0 +1,44 @@
+<?php
+
+
+
+namespace app\admin\model\ump;
+
+use traits\ModelTrait;
+use basic\ModelBasic;
+
+class EventData extends ModelBasic
+{
+    use ModelTrait;
+
+    /**添加活动资料
+     * @param array $data
+     */
+    public static function eventDataAdd($id=0,$data=[])
+    {
+        if(!$id) return false;
+        self::where('event_id',$id)->delete();
+        if(count($data)<=0) return true;
+        foreach ($data as $k=>&$time){
+            $time['event_id']=$id;
+            self::set($time);
+        }
+        return true;
+    }
+    /**
+     * 活动资料列表
+     */
+    public static function eventDataList($id=0)
+    {
+        $list = self::where(['event_id'=>$id])->order('sort DESC,id ASC')->select();
+        return count($list) > 0 ? $list->toArray() : [];
+    }
+
+    /**删除活动资料
+     * @param $event_id
+     */
+    public static function delEventData($event_id)
+    {
+        return self::where('event_id',$event_id)->delete();
+    }
+}

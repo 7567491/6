@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    {include file="public/head" /}
+    <title>{block name="title"}{/block}</title>
+    {include file="public/style" /}
+    {block name="head_top"}{/block}
+    <script type="text/javascript" src="https://res2.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PLUG_PATH}wxApi.js"></script>
+    <link rel="icon" href="{$site_favicon}" type="image/png">
+
+    {if (config('is_lan') == false)}
+    <link rel="stylesheet" href="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/skins/default/aliplayer-min.css" />
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/aliplayer-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-vod-p-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-vod-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-hls-min.js"></script>
+    {else}
+    <link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/aliplayer/aliplayer-min.css" />
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/aliplayer/aliplayer-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/aliplayer/aliplayer-vod-p-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/aliplayer/aliplayer-vod-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/aliplayer/aliplayer-hls-min.js"></script>
+    {/if}
+
+    {if ($slide_captcha == 1)}
+    <link rel="stylesheet" type="text/css" href="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/captcha/css/verify.css">
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/captcha/js/crypto-js.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/captcha/js/ase.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}static/captcha/js/verify.js"></script>
+    <script type="text/javascript">
+        var slide_captcha = {$slide_captcha};
+        var slide_captcha_api = "{$slide_captcha_api}";
+    </script>
+    {/if}
+    <script type="text/javascript">
+        var login_types = {$login_types};
+        var img_domain = "{$Think.const.IMG_DOMAIN}";
+        function fx_cdn_img(src) {
+            if (!src) return;
+            let domain = img_domain;
+            // 判断url开头是否是http
+            if (src.indexOf('http') === 0) {
+                domain = ''
+            }
+            return domain + src;
+        }
+    </script>
+    <script>
+        $jssdk = function(){return <?=\service\WechatService::jsSdk()?>;}
+        window.overallShare=true;
+    </script>
+    {if !isset($requirejs)}{include file="public/requirejs" /}{/if}
+
+    {block name="head"}{/block}
+</head>
+<body>
+{block name="content"}{/block}
+{block name="foot"}{/block}
+{include file="public/foot" /}
+{include file="public/right_nav" /}
+</body>
+</html>

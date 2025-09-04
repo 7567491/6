@@ -1,0 +1,171 @@
+{extend name="public/container"}
+{block name="title"}练习结果{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-sheet-title" style="margin-top: 0">{{ result.title }}</div>
+    <div class="wy-exam-result-rate">
+        <div class="wy-exam-result-circle">
+            <vue-circle-progress
+                    ref="circle"
+                    id="circle"
+                    :progress="0"
+                    :size="200"
+                    :reverse="false"
+                    line-cap="round"
+                    :fill="fill"
+                    empty-fill="rgba(213, 224, 236, 0.6)"
+                    :animation-start-value="0.0"
+                    :start-angle="Math.PI / 2"
+                    insert-mode="append"
+                    :thickness="5"
+                    inner-text="正确率"
+                    :show-percent="true"
+            >
+                <p>正确率</p>
+            </vue-circle-progress>
+        </div>
+        <div class="wy-exam-result-total">
+            <div class="wy-exam-detail-total">
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.test_paper_question.length }}</em>题
+                    </div>
+                    <div class="wy-exam-total-label">
+                        题目数
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.wrong_question }}</em>题
+                    </div>
+                    <div class="wy-exam-total-label">
+                        错题数
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.not_questions }}</em>题
+                    </div>
+                    <div class="wy-exam-total-label">
+                        未答数
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="wy-exam-sheet-main">
+        <div class="wy-exam-sheet-legend">
+            <div class="wy-exam-sheet-status">答题情况</div>
+            <ul>
+                <li class="right">正确</li>
+                <li class="wrong">错误</li>
+                <li class="unknown">未答</li>
+            </ul>
+        </div>
+        <div v-if="result.test_paper_question.length" class="wy-exam-sheet-question">
+            <a
+                v-for="(item, index) in result.test_paper_question"
+                :class="{
+                    right: item.is_correct === 2,
+                    wrong: item.is_correct === 1
+                 }"
+                href="javascript:"
+            >{{ index + 1 }}</a>
+        </div>
+    </div>
+    <div v-if="!footerHidden" class="wy-exam-sheet-footer">
+        <a :href="'{:url('/test-sheet')}?from=problem_result&test_id=' + test_id + '&record_id=' + result.id" class="el-button el-button--primary is-round" style="color: #fff">返回答题卡</a>
+        <!-- <a :href="'{:url('/m/exam')}?id=' + test_id">再考一次</a> -->
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'scripts/util',
+        'api/exam',
+        'vue-circle-progress'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, util, examApi, VueCircle) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'vue-circle-progress': VueCircle,
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                test_id: 0,
+                result: {
+                    title: '--',
+                    score: 0,
+                    grade: '--',
+                    test_paper_question: [],
+                    wrong_question: 0,
+                    duration_time: '00:00:00'
+                },
+                fill : { gradient: ["rgba(44, 142, 255, 1)", "rgba(44, 142, 255, 0.05)"] },
+                footerHidden: false
+            },
+            created: function () {
+                this.test_id = util.getParmas('test_id');
+                this.footerHidden = util.getParmas('from') === 'question_user';
+                this.getResult();
+            },
+            methods: {
+                getResult: function () {
+                    examApi.get_examination_results({
+                        test_id: this.test_id,
+                        type: 1
+                    }).then(function (res) {
+                        var result = res.data;
+                        var questions = result.test_paper_question;
+
+                        var duration = result.duration
+                        var hours = Math.floor(duration / 3600000);
+                        var minutes = Math.floor((duration - hours * 3600000) / 60000);
+                        var seconds = Math.floor((duration - hours * 3600000 - minutes * 60000) / 1000);
+                        if (hours < 10) {
+                            hours = '0' + hours;
+                        }
+                        if (minutes < 10) {
+                            minutes = '0' + minutes;
+                        }
+                        if (seconds < 10) {
+                            seconds = '0' + seconds;
+                        }
+                        result.duration_time = hours + ':' + minutes + ':' + seconds;
+
+                        for (var i = questions.length; i--;) {
+                            if (!Array.isArray(questions[i].userAnswer)) {
+                                Object.assign(questions[i], questions[i].userAnswer);
+                            }
+                        }
+
+                        vm.$refs.circle.updateProgress(parseInt(result.accuracy));
+                        vm.result = result;
+                    })
+                }
+            }
+        });
+    })
+</script>
+{/block}

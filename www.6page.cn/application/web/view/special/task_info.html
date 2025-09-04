@@ -1,0 +1,454 @@
+{extend name="public/container"}
+{block name="app"}
+<div class="lesson-header">
+    {include file='public/top' /}
+</div>
+<div class="lesson-body" :class="{'is-light-pic': task_id == 0 && taskInfo.light_type == 1, 'is-pic-course': !taskInfo.is_light && taskInfo.type == 1}">
+    <div class="lesson-main">
+        <div class="lesson-focus-box">
+            <div class="lesson-focus-top">正在播放：{{ taskInfo.title }}</div>
+            <div class="lesson-focus-main">
+                <div class="lesson-pic-course" :style="{height: video_height}" v-if="task_id != 0 && taskInfo.type == 1">
+                    <div v-if="taskInfo.type == 1" v-html="taskInfo.content"></div>
+                </div>
+                <div class="lesson-player-box" :style="{height: video_height}" v-else>
+                    <div class="prism-player" id="J_prismPlayer">
+                        {if condition="!$is_close_watermark"}
+                        <div class="video-watermark" id="video-watermark">
+                            {if condition="$is_site_watermark"}
+                            <div>{$Auth_site_name}</div>
+                            {/if}
+                            {if condition="$is_account_watermark"}
+                            <div>{$userInfo.account ? $userInfo.account : ''}</div>
+                            {/if}
+                        </div>
+                        {/if}
+                    </div>
+                </div>
+                <div v-if="task_id != 0" class="lesson-catalog" :style="{height: video_height}">
+                    <div class="lesson-catelog-title">目录</div>
+                    <div class="lesson-catelog-list" v-infinite-scroll="get_course_list" infinite-scroll-disabled="finished">
+                        <div
+                                class="lesson-catelog-item"
+                                v-for="(item, index) in courseList"
+                                :key="index"
+                                :class="{ active: task_id == item.id }"
+                                @click="selectCourse(item)"
+                        >
+                            <div class="li-title-box">
+                            <span class="li-icon">
+                                <i v-if="taskInfo.type == 1 || taskInfo.light_type == 1" class="el-icon-picture-outline-round" title="图文"></i>
+                                <i v-if="taskInfo.type == 2 || taskInfo.light_type == 2" class="el-icon-headset" title="音频"></i>
+                                <i v-if="taskInfo.type == 3 || taskInfo.light_type == 3" class="el-icon-video-play" title="视频"></i>
+                            </span>
+                                <span v-if="taskInfo.is_free" class="li-isfree">免费</span>
+                                <span class="li-title" :title="item.title">{{item.title}}</span>
+                            </div>
+                            <div class="li-subtitle">
+                                <span class="li-subtitle-section">学习进度：{{item.watch ? item.watch.is_complete ? 100 : item.watch.percentage : 0}}%</span>
+                                <span v-if="item.watch" class="li-subtitle-section">时长：{{formatMilliseconds(item.watch)}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h1 class="light-pic-title">{{taskInfo.title}}</h1>
+    <div class="lesson-intro">
+        <div class="lesson-intro-left">
+            <h3 class="light-pic-subtitle" v-if="task_id == 0 && taskInfo.light_type == 1">课程内容</h3>
+            <h3 class="not-light-pic-subtitle" v-else>课节介绍</h3>
+            <div class="lesson-detail">
+                <div v-if="taskInfo.light_type == 1" v-html="taskInfo.content"></div>
+                <div v-else-if="taskInfo.type == 2 || taskInfo.light_type == 2" class="container_courseDetils_content" v-html="taskInfo.detail || taskInfo.abstract"></div>
+                <div v-else-if="taskInfo.type == 3 || taskInfo.light_type == 3" class="container_courseDetils_content" v-html="taskInfo.detail || taskInfo.abstract"></div>
+            </div>
+        </div>
+        <div class="lesson-belong">
+            <h3>课程信息</h3>
+            <a :href="course_link">
+                <div class="lesson-belong-cover" :style="{'background-image': 'url('+ replace_url(specialInfo.image) +')'}"></div>
+                <h4>{{specialInfo.title}}</h4>
+                <div class="lesson-belong-intro" v-html="specialInfo.abstract"></div>
+                <div class="lesson-belong-meta">
+                    评分：
+                    <el-rate
+                            v-model="specialInfo.score"
+                            disabled
+                            show-score
+                            text-color="#ff9900"
+                            score-template="{value}分">
+                    </el-rate>
+                </div>
+                <div class="lesson-goback">
+                    返回课程
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/special',
+        'scripts/util',
+        'css!styles/audioCourse.css'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, specialApi, util) {
+        Vue.use(ELEMENT);
+        var video_bar = {$video_bar};
+        new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                isPay: 0,
+                specialInfo: {},
+                taskInfo: {},
+                task_id: '',
+                courseList: [],
+                page: 1,
+                limit: 1000,
+                viewing_time: 0,
+                currentTime: 0,
+                player: null,
+                seeked: false,
+                // 视频播放模式
+                video_type: 1,
+                video_height: 0,
+                course_link: '',
+                try: {$try},
+                isPaused: false
+            },
+            mounted: function () {
+                this.resetVideoSize()
+                window.addEventListener('resize', this.resetVideoSize);
+                setTimeout(() => {
+                    this.task_id = util.getParmas('task_id');
+                    this.special_id = util.getParmas('specialId');
+                    // this.viewing_time = util.getParmas('viewing_time') / 1e3;
+                    // this.currentTime = Math.floor(this.viewing_time);
+                    document.title = util.getParmas('special_title');
+                    this.getTaskInfo();
+                    // task_id === '0' 精简课
+                    if (this.task_id != '0') {
+                        this.get_course_list();
+                    }
+                })
+            },
+            methods: {
+                replace_url: function (url) {
+                    if (!url) return ''
+                    let domain = img_domain;
+                    // 判断url开头是否是http
+                    if (url.indexOf('http') === 0) {
+                        domain = ''
+                    }
+                    return domain + url.replace(/\\/g, '/')
+                },
+                formatMilliseconds: function (item) {
+                    if (!item) return
+                    milliseconds = item.total
+                    const totalSeconds = Math.floor(milliseconds / 1000);
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+
+                    return `${minutes}分${seconds}秒`;
+                },
+                resetVideoSize: function () {
+                    var fullWidth = window.innerWidth - 160 - 350;
+                    var videoHeight = fullWidth * 9 / 16
+                    this.video_height = videoHeight + 'px'
+                },
+                // 素材详情
+                getTaskInfo: function () {
+                    var vm = this;
+                    specialApi.getTaskInfo({
+                        special_id: vm.special_id,
+                        task_id: vm.task_id,
+                        try: vm.try
+                    }).then(function (res) {
+                        var data = res.data;
+                        vm.isPay = data.isPay;
+                        vm.specialInfo = data.specialInfo;
+                        vm.taskInfo = data.taskInfo;
+                        vm.course_link = vm.taskInfo.is_light ? router.single_course + '?id=' + data.specialInfo.id : router.view_course + '?id=' + data.specialInfo.id
+                        vm.viewing_time = data.taskInfo.watch && data.taskInfo.watch.viewing_time / 1e3 || 0;
+                        vm.currentTime = Math.floor(vm.viewing_time);
+                        if (vm.taskInfo.type == 1 || vm.taskInfo.light_type == 1) {
+                            vm.duration = 100;
+                            vm.viewing(100);
+                            return;
+                        }
+
+                        if (vm.taskInfo.is_light) {
+                            vm.video_type = data.taskInfo.singleProfile.video_type
+                        } else {
+                            vm.video_type = data.taskInfo.video_type
+                        }
+                        if (vm.video_type === 1 || vm.video_type === 4) {
+                            vm.createPlayer();
+                            return
+                        }
+                        vm.get_video_playback_credentials(vm.taskInfo.singleProfile && vm.taskInfo.singleProfile.videoId || vm.taskInfo.videoId);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 播放列表
+                get_course_list: function () {
+                    var vm = this;
+                    specialApi.get_course_list({
+                        page: 1,
+                        limit: vm.limit,
+                        special_id: vm.special_id
+                    }).then(function (res) {
+                        var list = res.data.list;
+                        vm.courseList = list;
+                        vm.finished = true;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 获取playauth
+                get_video_playback_credentials: function (videoId) {
+                    var vm = this;
+                    specialApi.get_video_playback_credentials({
+                        videoId: videoId,
+                        type: 2
+                    }).then(function (res) {
+                        var request = new XMLHttpRequest();
+                        request.onreadystatechange = function () {
+                            if (request.readyState == 4 && request.status == 200) {
+                                try {
+                                    var data = JSON.parse(request.responseText);
+                                    vm.duration = data.VideoMeta.Duration;
+                                    vm.createPlayer(data.PlayAuth);
+                                } catch (error) {
+                                    vm.$message.error(error);
+                                }
+                            }
+                        };
+                        request.open('GET', res.msg, true);
+                        request.send();
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 创建播放器
+                createPlayer: function (playauth) {
+                    var vm = this;
+                    var options = {
+                        id: 'J_prismPlayer',
+                        vid: vm.taskInfo.videoId,
+                        playauth: playauth || '',
+                        height: '100%',
+                        cover: vm.taskInfo.image,
+                        controlBarVisibility: vm.taskInfo.type == 2 ? 'always' : 'hover',
+                        // format: vm.taskInfo.type == 2 ? 'mp3' : '',
+                        mediaType: vm.taskInfo.type == 2 ? 'audio' : 'video',
+                    };
+                    // 当需课程未看完不允许显示进度条时候执行下方隐藏进度条的逻辑
+                    if (!video_bar) {
+                        if(!vm.taskInfo.watch || vm.taskInfo.watch && !vm.taskInfo.watch.is_complete){
+                            options.skinLayout = [
+                                {name: "bigPlayButton", align: "blabs", x: 30, y: 80},
+                                {
+                                    name: "H5Loading", align: "cc"
+                                },
+                                {name: "errorDisplay", align: "tlabs", x: 0, y: 0},
+                                {name: "infoDisplay"},
+                                {name:"tooltip", align:"blabs",x: 0, y: 56},
+                                {name: "thumbnail"},
+                                {
+                                    name: "controlBar", align: "blabs", x: 0, y: 0,
+                                    children: [
+                                        {name: "playButton", align: "tl", x: 15, y: 12},
+                                        {name: "timeDisplay", align: "tl", x: 10, y: 7},
+                                        {name: "fullScreenButton", align: "tr", x: 10, y: 12},
+                                        {name: "volume", align: "tr", x: 5, y: 10}
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                    if (vm.taskInfo.is_light) {
+                        options.source = vm.taskInfo.singleProfile.link;
+                        options.vid = vm.taskInfo.singleProfile.videoId;
+                        options.controlBarVisibility = vm.taskInfo.light_type == 2 ? 'always' : 'hover';
+                        options.mediaType = vm.taskInfo.light_type == 2 ? 'audio' : 'video';
+                        // options.format = vm.taskInfo.light_type == 2 ? 'mp3' : '';
+                    }
+                    if(vm.taskInfo.image) {
+                        options.cover = this.replace_url(vm.taskInfo.image);
+                    }
+                    if(vm.video_type === 1 || vm.video_type === 4) {
+                        options.vid = '';
+                        options.source = vm.taskInfo.link;
+                        options.encryptType = 0;
+                    }
+                    if(vm.video_type === 2) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.video_type === 3) {
+                        options.encryptType = 1;
+                        options.playConfig = {EncryptType:'AliyunVoDEncryption'};
+                        var check = function () {
+                            function doCheck(a) {
+                                if (("" + a / a)["length"] !== 1 || a % 20 === 0) {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                } else {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                }
+                                doCheck(++a)
+                            }
+                            try {
+                                doCheck(0)
+                            } catch (err) {}
+                        };
+                        check();
+                    }
+
+                    // ios
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.player) {
+                        vm.player.dispose();
+                        vm.player = null;
+                    }
+                    vm.player = new Aliplayer(options, function (player) {
+                        // 对免流播放进行特殊处理
+                        if (vm.video_type === 4) {
+                            setInterval(function (){
+                                specialApi.getTaskInfo({
+                                    special_id: vm.special_id,
+                                    task_id: vm.task_id,
+                                    try: vm.try
+                                }).then(function (res) {
+                                    var data = res.data;
+                                    let taskInfo = data.taskInfo;
+                                    // 获取当前播放的时间
+                                    var currentTime = vm.player.getCurrentTime();
+                                    let link = JSON.parse(taskInfo.link);
+                                    let play_url = '';
+                                    for (let key in link) {
+                                        play_url = link[key];
+                                    }
+                                    vm.player.loadByUrl(play_url, currentTime)
+                                    var status = vm.player.getStatus();
+                                    if (status === 'ended' || status === 'pause') {
+                                        vm.isPaused = true;
+                                    }
+                                })
+                            }, 60 * 10 * 1000)
+                        }
+                    });
+                    vm.player.on('ready', vm.onPlayerReady);
+                    vm.player.on('canplay', vm.onPlayerCanplay);
+                    vm.player.on('ended', vm.onPlayerEnded);
+                    vm.player.on('timeupdate', vm.onPlayerTimeupdate);
+                },
+                onPlayerReady: function (e) {
+                    var vm = this;
+                    vm.duration = vm.player.getDuration();
+                    // 简单课程试看
+                    if (this.try && this.specialInfo.is_light && this.taskInfo.singleProfile.is_try) {
+                        this.player.setPreviewTime(this.taskInfo.singleProfile.try_time * 60);
+                        return;
+                    }
+                    // 普通课程试看
+                    if (!vm.isPay && vm.taskInfo.is_try) {
+                        this.player.setPreviewTime(this.taskInfo.try_time * 60);
+                    }
+                    if (vm.taskInfo.singleProfile && vm.taskInfo.singleProfile.videoId || vm.taskInfo.videoId) {
+                        return;
+                    }
+                },
+                onPlayerCanplay: function () {
+                    var vm = this;
+                    if (!vm.seeked) {
+                        vm.seeked = true;
+                        vm.player.seek(vm.viewing_time);
+                    }
+
+                    if (vm.isPaused) {
+                        vm.player.pause();
+                    }
+                },
+                onPlayerEnded: function () {
+                    var vm = this;
+                    if (!vm.isPay && vm.taskInfo.is_try || this.try && this.specialInfo.is_light) {
+                        vm.$confirm('购买后可看完整视频，是否去购买?', '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            var url = '{:url("/view-course")}?id=' + vm.specialInfo.id
+                            var single_url = '{:url("/single-course")}?id=' + vm.specialInfo.id
+                            location.assign(this.specialInfo.is_light ? single_url : url)
+                        }).catch(() => {
+
+                        });
+                    } else {
+                        vm.viewing(vm.duration);
+                    }
+                },
+                onPlayerTimeupdate: function () {
+                    var vm = this;
+                    var currentTime = vm.player.getCurrentTime();
+                    var currentTimeInt = Math.floor(currentTime);
+                    if (currentTimeInt == vm.currentTime || currentTimeInt % 10) {
+                        return;
+                    }
+                    vm.currentTime = currentTimeInt;
+                    vm.viewing(currentTime);
+                },
+                // 点击播放列表
+                selectCourse: function (task) {
+                    var vm = this;
+                    if (vm.task_id == task.id) {
+                        return;
+                    }
+                    vm.task_id = task.id;
+                    // vm.viewing_time = 0;
+                    // vm.currentTime = Math.floor(vm.viewing_time);
+                    vm.seeked = false;
+                    // vm.getTaskInfo();
+                    window.location.href = router.task_info + '?task_id='+ vm.task_id +'&specialId='+ vm.specialInfo.id +'&special_title='+ vm.specialInfo.title
+                },
+                // 更新播放进度
+                viewing: function (currentTime) {
+                    var vm = this;
+                    specialApi.viewing({
+                        special_id: vm.special_id,
+                        task_id: vm.task_id,
+                        total: vm.duration * 1e3,
+                        viewing_time: currentTime * 1e3,
+                        percentage: Math.floor(currentTime / vm.duration * 100)
+                    }).then(function (res) {
+                        vm.get_course_list()
+                    });;
+                }
+            }
+        });
+    });
+</script>
+{/block}

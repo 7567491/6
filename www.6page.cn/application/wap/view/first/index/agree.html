@@ -1,0 +1,28 @@
+
+{extend name="public/container"}
+{block name="title"}{$title}-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .content {
+        padding: 0.3rem;
+    }
+    .content img{
+        width: 100%;
+    }
+</style>
+{/block}
+{block name="content"}
+<div class="search-page" id="app">
+    <div class="content">
+        {$content}
+    </div>
+{include file="public/store_menu"}
+</div>
+<script>
+    require(['vue','{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/quick.js'], function (Vue) {
+        new Vue({
+            el: '#app',
+        });
+    });
+</script>
+{/block}

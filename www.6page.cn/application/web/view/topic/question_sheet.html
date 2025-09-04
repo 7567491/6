@@ -1,0 +1,194 @@
+{extend name="public/container"}
+{block name="title"}{$title}答题卡-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div v-show="questions.length" class="wy-exam-header">
+        <a
+                class="el-button el-button--default el-button--small"
+                :href="'{:url('/view-exam')}?test_id=' + test_id + '&e_id=' + record_id + '&is_analysis=' + is_analysis + '&index=' + index + '&txamination_time=' + txamination_time + '&exam_time=' + duration"
+        >
+            <i class="el-icon-notebook-2"></i> {{ is_analysis ? '查看解析' : '返回答题' }}
+        </a>
+        <div class="wy-exam-header-meta">
+            <div class="wy-exam-header-meta-item" v-if="!is_analysis">已用时长：<em>{{ duration | formatTime }}</em></div>
+        </div>
+    </div>
+    <div class="wy-exam-sheet-title">{$title}</div>
+    <div class="wy-exam-sheet-main">
+        <div class="wy-exam-sheet-legend">
+            <div class="wy-exam-sheet-status">答题情况</div>
+            <ul>
+                <li class="replied">已答</li>
+                <li class="unknown">未答</li>
+            </ul>
+        </div>
+        <div v-if="questions.length" class="wy-exam-sheet-question">
+            <a
+                    v-for="(item, index) in questions"
+                    :class="{
+                        replied: item.is_correct
+                    }"
+                    :href="'{:url('/view-exam')}?test_id=' + test_id + '&index=' + index + '&is_analysis=' + is_analysis + '&e_id=' + record_id + '&txamination_time=' + txamination_time"
+            >{{ index + 1 }}</a>
+        </div>
+    </div>
+    <div v-if="!is_analysis" class="wy-exam-sheet-footer">
+        <el-button type="primary" round @click="submit">交卷</el-button>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'scripts/util',
+        'api/exam'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, util, examApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            filters: {
+                formatTime: function (time) {
+                    var hour = Math.floor(time / 3600000);
+                    var minute = Math.floor((time - hour * 3600000) / 60000);
+                    var second = Math.floor((time - hour * 3600000 - minute * 60000) / 1000);
+
+                    if (hour < 10) {
+                        hour = '0' + hour;
+                    }
+                    if (minute < 10) {
+                        minute = '0' + minute;
+                    }
+                    if (second < 10) {
+                        second = '0' + second;
+                    }
+
+                    return hour + ':' + minute + ':' + second;
+                }
+            },
+            data: {
+                startTime: new Date(),
+                duration: 0,
+                test_id: '',
+                record_id: '',
+                index: 0,
+                questions: [],
+                loading: false,
+                is_analysis: 0,
+                txamination_time: 0
+            },
+            created: function () {
+                if (util.getCookie('exam_time')) {
+                    this.exam_time = parseInt(util.getCookie('exam_time'));
+                }
+                this.test_id = util.getParmas('test_id');
+                this.record_id = util.getParmas('record_id');
+                this.is_analysis = parseInt(util.getParmas('is_analysis'));
+                if (util.getParmas('index')) {
+                    this.index = parseInt(util.getParmas('index'));
+                }
+                if (util.getParmas('is_analysis') && parseInt(util.getParmas('is_analysis'))) {
+
+                } else {
+                    this.setTimer();
+                    this.txamination_time = parseInt(util.getParmas('txamination_time'));
+                }
+                this.getSheet();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    window.addEventListener('pagehide', function () {
+                        util.setCookie('exam_time', vm.duration);
+                    });
+                });
+            },
+            methods: {
+                getSheet: function () {
+                    this.loading = true;
+                    examApi.get_answer_sheet({
+                        test_id: this.test_id,
+                        type: 2,
+                        record_id: this.record_id
+                    }).then(function (res) {
+                        vm.loading = false;
+
+                        var questions = res.data;
+
+                        for (var i = questions.length; i--;) {
+                            if (!Array.isArray(questions[i].userAnswer)) {
+                                Object.assign(questions[i], questions[i].userAnswer);
+                            }
+                        }
+
+                        vm.questions = questions;
+                    })
+                },
+                setTimer: function () {
+                    var timer = setInterval(function () {
+                        vm.duration = new Date() - vm.startTime + vm.exam_time;
+                        if (vm.duration >= vm.txamination_time * 60000) {
+                            clearInterval(timer);
+                            vm.$message({
+                                message: '考试时间已到',
+                                type: 'warning',
+                                onClose: function () {
+                                    vm.submit();
+                                }
+                            });
+                        }
+                    }, 1000);
+                },
+                submit: function () {
+                    var that=this;
+                    this.loading = true;
+                    examApi.submit_test({
+                        examination_id: that.record_id,
+                        type: 2,
+                        duration: that.duration
+                    }).then(function (res) {
+                        vm.loading = false;
+                        if (200 === res.code) {
+                            util.delCookie('e_id');
+                            util.delCookie('exam_time');
+                            vm.is_analysis = 1;
+                            vm.$message({
+                                message: '提交成功',
+                                type: 'success',
+                                onClose: function () {
+                                    location.href = "{:url('/exam-result')}?test_id=" + that.test_id;
+                                }
+                            });
+                        } else {
+                            vm.$message({
+                                message: res.msg,
+                                type: 'warning'
+                            });
+                        }
+                    })
+                }
+            }
+        })
+    })
+</script>
+{/block}

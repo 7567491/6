@@ -1,0 +1,149 @@
+{extend name="public/container"}
+{block name='head_top'}
+<style>
+    [v-cloak]{
+        display: none;
+    }
+</style>
+{/block}
+{block name="content"}
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space15"  >
+        <div class="layui-col-md12" id="app" v-cloak="">
+            <div class="layui-card">
+                <div class="layui-card-header">搜索条件</div>
+                <div class="layui-card-body">
+                    <div class="layui-form layui-form-pane">
+                        <div class="layui-form-item">
+                            <div class="layui-col-lg12">
+                                <label class="layui-form-label">创建时间:</label>
+                                <div class="layui-input-block" data-type="data" v-cloak="">
+                                    <button class="layui-btn layui-btn-normal layui-btn-sm" type="button" v-for="item in dataList" @click="setData(item)" :class="{'layui-btn-primary':where.data!=item.value}">{{item.name}}</button>
+                                    <button class="layui-btn layui-btn-sm" type="button" ref="time" @click="setData({value:'zd',is_zd:true})" :class="{'layui-btn-primary':where.data!='zd'}">自定义</button>
+                                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" v-show="showtime==true" ref="date_time">{$year.0} - {$year.1}</button>
+                                </div>
+                            </div>
+                            <div class="layui-col-lg12">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn layui-btn-sm layui-btn-normal" type="button" @click="search"><i class="layui-icon layui-icon-search"></i>搜索</button>
+                                    <button class="layui-btn layui-btn-sm layui-btn-normal" type="button" @click="excel">导出</button>
+                                    <button class="layui-btn layui-btn-sm layui-btn-normal" type="button" @click="refresh"><i class="layui-icon layui-icon-refresh" ></i>刷新</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">学习记录</div>
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="userList" lay-filter="userList"></table>
+                    <script type="text/html" id="level">
+                        {{#  if(d.level==1){ }}
+                        会员
+                        {{#  }else{ }}
+                        非会员
+                        {{# }; }}
+                    </script>
+                    <script type="text/html" id="act">
+                        <button type="button" class="layui-btn layui-btn-normal layui-btn-xs" lay-event='percentage'>
+                            查看具体学习进度
+                        </button>
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{__ADMIN_PATH}js/layuiList.js"></script>
+<script>
+    var id={$id};
+    layList.tableList('userList',"{:Url('specialLearningRecordsList')}?id={$id}&uid={$uid}",function () {
+        return [
+            {field: 'uid', title: 'UID', width:'10%',align: 'center'},
+            {field: 'nickname', title: '昵称',align: 'center',width:'15%'},
+            {field: 'phone', title: '电话',width:'10%',align: 'center'},
+            {field: 'full_name', title: '真实姓名',align: 'center',width:'10%'},
+            {field: 'level', title: '身份',width:'15%',align: 'center',templet:'#level'},
+            {field: 'last_study_time', title: '最后学习时间',width:'15%',align: 'center'},
+            {field: 'right', title: '操作',align:'center',toolbar:'#act',width:'25%'}
+        ];
+    });
+    //点击事件绑定
+    layList.tool(function (event,data,obj) {
+        switch (event) {
+            case 'percentage':
+                layer.open({
+                    type: 2,
+                    title: data.nickname + '—学习进度',
+                    content: '{:Url('percentage')}?uid=' + data.uid + "&special_id="+data.special_id + "&type="+data.type+"&is_light="+data.is_light,
+                    area: ['80%', '90%'],
+                    maxmin: true
+                });
+                break;
+        }
+    });
+    require(['vue'],function(Vue) {
+        new Vue({
+            el: "#app",
+            data: {
+                badge: [],
+                dataList: [
+                    {name: '全部', value: ''},
+                    {name: '昨天', value: 'yesterday'},
+                    {name: '今天', value: 'today'},
+                    {name: '本周', value: 'week'},
+                    {name: '本月', value: 'month'},
+                    {name: '本季度', value: 'quarter'},
+                    {name: '本年', value: 'year'},
+                ],
+                where:{
+                    id:id,
+                    excel:0,
+                    data:''
+                },
+                showtime: false,
+            },
+            methods: {
+                setData:function(item){
+                    var that=this;
+                    if(item.is_zd==true){
+                        that.showtime=true;
+                        this.where.data=this.$refs.date_time.innerText;
+                    }else{
+                        this.showtime=false;
+                        this.where.data=item.value;
+                    }
+                },
+                search:function () {
+                    this.where.excel=0;
+                    this.where.id=id;
+                    layList.reload(this.where,true);
+                },
+                excel:function () {
+                    this.where.id=id;
+                    this.where.excel=1;
+                    location.href=layList.U({a:'specialLearningRecordsList',q:this.where});
+                },
+                refresh:function () {
+                    window.location.reload();
+                }
+            },
+            mounted:function () {
+                var that=this;
+                layList.laydate.render({
+                    elem:this.$refs.date_time,
+                    trigger:'click',
+                    eventElem:this.$refs.time,
+                    range:true,
+                    change:function (value){
+                        that.where.data=value;
+                    }
+                });
+            }
+        })
+    });
+</script>
+{/block}

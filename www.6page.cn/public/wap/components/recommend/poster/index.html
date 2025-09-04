@@ -1,0 +1,12 @@
+<div class="advert">
+    <div id="swiper7" class="swiper-container" @click="advertClick">
+        <div class="swiper-wrapper">
+            <div v-for="item in advertList" :key="item.id" :data-url="item.url" class="swiper-slide">
+                <a :href="item.url">
+                    <img :src="fx_cdn_img(item.banner)">
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="swiper-pagination advert-pagination"></div>
+</div>

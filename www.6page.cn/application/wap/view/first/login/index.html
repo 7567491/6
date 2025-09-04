@@ -1,0 +1,54 @@
+
+{extend name="public/container"}
+{block name="head_top"}
+<style>
+    .mask h4{padding-top: 1rem;padding-bottom: 1rem;margin-top: 1rem;color: #ffffff;font-size: 0.5rem;text-align: center;}
+    .mask .code{width: 100%;display: flex;align-items: center}
+    .mask .code .image{height: 5rem;width: 5rem;margin: 0 auto;}
+    .mask a{display: inherit;text-align: center; font-size: 0.28rem;color: #fff;width: 2.5rem;height: 0.6rem;background-color: #509efb;line-height: 0.6rem;border-radius: 0.5rem;margin: 1rem auto;}
+    .login-logo{width: 50%;margin: 0 auto;margin-top: 1rem;}
+    .login-form{border-top: 1px solid #eee;}
+</style>
+{/block}
+{block name="title"}立即登陆-{$Auth_site_name}{/block}
+{block name="content"}
+<div id="app" v-cloak>
+    <div class="mask" @touchmove.prevent style="z-index: 100;" v-show="isfollow">
+        <h4>立即绑定微信公众号用户</h4>
+        <div class="code">
+            <img :src="codeUrl" class="image" alt="">
+        </div>
+        <a class="button" target="_blank" href="{$m_home_url}">跳过直接去首页</a>
+    </div>
+    <div class="login-logo">
+        <a href="/m"><img :src="logo" width="100%"></a>
+    </div>
+    <div class="login-form">
+        <base-login :login-show="true" :inline="true" :site-name="site_name" :cancel-btn="false" @login-close="loginClose"></base-login>
+    </div>
+</div>
+{/block}
+{block name='foot'}
+<script>
+    var ref ='{$ref}',site_name = '{$Auth_site_name}',logo='{$home_logo}';
+    require(['vue','helper','store', 'components/base_login/index'],function(Vue,$h,app, BaseLogin) {
+        new Vue({
+            el:'#app',
+            components: {
+                'base-login': BaseLogin
+            },
+            data:{
+                codeUrl:'',
+                isfollow:false,
+                site_name:site_name,
+                logo: logo
+            },
+            methods:{
+                loginClose: function (val) {
+                    window.location.href = ref ? ref : $h.U({s: true, c: 'index', a: 'index' });
+                }
+            }
+        })
+    })
+</script>
+{/block}

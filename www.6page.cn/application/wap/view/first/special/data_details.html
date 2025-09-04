@@ -1,0 +1,415 @@
+
+{extend name="public/container"}
+{block name="title"}{$title}-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .layui-layer-shade {
+        opacity: 0.6 !important;
+    }
+
+    .layui-layer-imgsee {
+        display: none;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="material-detail">
+        <div class="header">
+            <img :src="material.image" alt="">
+            <div>
+                <div>{{ material.title }}</div>
+                <div>
+                    <div>
+                        <div>{{ material.ficti + material.sales }}人已下载</div>
+                        <div :class="{ money: material.pay_type }">
+                            <template v-if="material.pay_type">
+                                ￥<span>{{ material.money }}</span><span>￥{{ material.member_money }}</span>
+                            </template>
+                            <template v-else>
+                                免费
+                            </template>
+                        </div>
+                    </div>
+                    <button type="button" @click="createShare">
+                        <i class="iconfont iconfenxiang"></i>
+                        <div>分享</div>
+                    </button>
+                    <button type="button" @click="collect">
+                        <i :class="['iconfont', material.collect ? 'iconshoucang2' : 'iconshoucang11']"></i>
+                        <div>{{ material.collect ? '已收藏' : '收藏' }}</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="main">
+            <div>
+                <div>详情</div>
+            </div>
+            <div v-html="material.abstract"></div>
+        </div>
+        <div class="footer">
+            <button type="button" @click="goHome">
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/detail-home.png" alt="">
+                首页
+            </button>
+            <button type="button" @click="customerService">
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/detail-chat.png" alt="">
+                客服
+            </button>
+            <button v-if="!material.pay_type || isPay || (!material.member_pay_type && is_member)" type="button" @click="download(1)">立即下载</button>
+            <button v-else type="button" @click="buy">立即购买</button>
+        </div>
+        <div :class="{ mask: hasDialog }" @touchmove.prevent @click="hasDialog = false"></div>
+        <div v-if="hasDialog && (!material.is_network_disk && isAndroid)" class="android">
+            <div>{{ material.title }}</div>
+            <button type="button" @click="download(2)">立即下载</button>
+        </div>
+        <div v-if="hasDialog && (material.is_network_disk || !isAndroid)" class="ios">
+            <div class="ios-tips">复制下方链接及提取码到网盘下载</div>
+            <div class="pan-content">
+                <div class="pan-info">
+                    <div class="pan-info-label">下载链接：</div>
+                    <div><a :href="material.network_disk_link">{{ material.network_disk_link }}</a></div>
+                </div>
+                <div class="pan-info">
+                    <div class="pan-info-label">提取码：</div>
+                    <div>{{ material.network_disk_pwd }}</div>
+                </div>
+            </div>
+            <div class="pan-copy">
+                <button class="btn" type="button" :data-clipboard-text="'链接：' + material.network_disk_link + '\n提取码：' + material.network_disk_pwd">一键复制</button>
+            </div>
+        </div>
+        <!-- 登录弹窗 -->
+        <base-login :login-show="loginShow" :site-name="site_name" @login-close="loginClose"></base-login>
+        <!-- 支付弹窗 -->
+        <payment :payment="payment" :money="money" :now_money="now_money" :special_id="material.id" :pay_type_num="pay_type_num" :is-wechat="isWechat" :is-alipay="is_alipay" :is-balance="is_yue" :template-id="templateId" :wxpay-h5="wxpayH5" @change="changeVal" :template-id="templateId"></payment>
+    </div>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    window.overallShare = false;
+    require([
+        'vue',
+        'clipboard',
+        'qrcode',
+        'helper',
+        'store',
+        'components/payment/index',
+        'components/base_login/index'
+    ], function (Vue, ClipboardJS, QRCode, $h, $http, payment, BaseLogin) {
+        var material = {$data};
+        var is_member = {$is_member};
+        var isPay = {$isPay ? 'true' : 'false'};
+        var site_url = "{$site_url}";
+        var site_name = "{$Auth_site_name}";
+        var isWechat={$isWechat ? 'true' : 'false'};
+        var now_money={$now_money};
+        var wxpayH5={$is_h5_wechat_payment_switch ? 'true' : 'false'};
+        var is_alipay={$is_alipay ? 'true' : 'false'};
+        var is_yue={$is_yue ? 'true' : 'false'};
+        var callback_url = '{$callback_url}';
+        var uid={$userInfo['uid'] ? $userInfo['uid']:0};
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                payment: payment,
+                'base-login': BaseLogin
+            },
+            data: {
+                material: material,
+                is_member: is_member,
+                isPay: isPay,
+                isWechat: isWechat,
+                isAndroid: true,
+                hasDialog: false,
+                isCollect: false,
+                payment: true,
+                money: 0,
+                now_money: now_money,
+                link_pay_uid: '',
+                pay_type_num: 70,
+                is_alipay: is_alipay,
+                is_yue: is_yue,
+                templateId: '',
+                wxpayH5: wxpayH5,
+                loginShow: false,
+                url: isWechat ? "{:url('index/login')}" : "{:url('login/phone_check')}",
+                site_name: site_name,
+                shareImage: '',
+                templateId: '',
+            },
+            created: function () {
+                this.getSubscribeId();
+                this.isAndroid = navigator.userAgent.indexOf('Android') !== -1;
+                if (this.isWechat) {
+                    mapleWx($jssdk(), function () {
+                        this.onMenuShareAll({
+                            title: vm.material.title,
+                            desc: vm.material.title,
+                            imgUrl: vm.material.image,
+                            link: window.location.href + (window.location.href.indexOf('?') === -1 ? '?' : '&') + 'spread_uid=' + uid
+                        });
+                    });
+                }
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    (!this.isAndroid || this.material.is_network_disk) && this.initialCopy();
+                });
+            },
+            methods: {
+                // 获取订阅通知模板id
+                getSubscribeId: function () {
+                    if (!this.isWechat) {
+                        return;
+                    }
+                    $h.loadFFF();
+                    $http.baseGet($h.U({
+                        c: 'special',
+                        a: 'getTemplateIds',
+                        q: {
+                            pay_type_num: this.pay_type_num,
+                            special_id: this.material.id
+                        }
+                    }), function (res) {
+                        $h.loadClear();
+                        this.templateId = res.data.msg;
+                    }.bind(this), function () {
+                        $h.loadClear();
+                    });
+                },
+                // 实例化clipboard
+                initialCopy: function () {
+                    this.clipboard = new ClipboardJS('.btn');
+                    this.clipboard.on('success', this.copySuccess);
+                    this.clipboard.on('error', this.copyError);
+                },
+                // 复制成功
+                copySuccess: function (e) {
+                    $h.pushMsg('复制成功', function () {
+                        vm.hasDialog = false;
+                        vm.recordDownload();
+                    });
+                    e.clearSelection();
+                },
+                // 复制失败
+                copyError: function () {
+                    $h.pushMsg('复制失败');
+                },
+                // 分享
+                createShare: function () {
+                    if (this.shareImage) {
+                        this.layerPhoto();
+                    } else {
+                        $h.loadFFF();
+                        Promise.all([
+                            new Promise(function (resolve, reject) {
+                                var image = new Image();
+                                image.crossOrigin = 'anonymous';
+                                image.src = vm.material.poster_image + '?' + new Date().getTime();
+                                image.onload = function () {
+                                    resolve(image);
+                                };
+                                image.onerror = function () {
+                                    reject('error-image');
+                                };
+                            }),
+                            new Promise(function (resolve, reject) {
+                                resolve(new QRCode(document.createElement('canvas'), site_url));
+                            })
+                        ]).then(function (sources) {
+                            var canvas = document.createElement('canvas');
+                            var context = canvas.getContext('2d');
+                            canvas.width = 600;
+                            canvas.height = 960;
+
+                            context.fillStyle = '#FFFFFF';
+                            context.fillRect(0, 0, 600, 960);
+
+                            context.drawImage(sources[0], 0, 0, 600, 740);
+                            context.drawImage(sources[1]._el.firstElementChild, 118, 785, 130, 130);
+
+                            context.font = '22px sans-serif';
+                            context.fillStyle = '#999999';
+                            context.fillText('邀您加入' + vm.site_name, 284, 832);
+                            context.fillText('长按识别或扫码进入', 284, 882);
+
+                            $h.loadClear();
+                            vm.shareImage = canvas.toDataURL('image/jpeg');
+                            vm.layerPhoto();
+                            canvas = null;
+                        }).catch(function (err) {
+                            $h.loadClear();
+                            $h.pushMsg(err);
+                        });
+                    }
+                },
+                // 收藏
+                collect: function () {
+                    $h.loadFFF();
+                    $http.baseGet($h.U({
+                        c: 'material',
+                        a: 'collect',
+                        q: {
+                            id: this.material.id
+                        }
+                    }), function (res) {
+                        $h.loadClear();
+                        vm.material.collect = !vm.material.collect;
+                        $h.pushMsg(vm.material.collect ? '收藏成功' : '取消收藏成功');
+                    }, function () {
+                        $h.loadClear();
+                    });
+                },
+                // 购买
+                buy: function () {
+                    $http.baseGet($h.U({ c: 'index', a: 'user_login' }), function () {
+                        this.money = this.is_member ? this.material.member_money : this.material.money;
+                        this.payment = false;
+                    }.bind(this), function () {
+                        this.loginShow = true;
+                    }.bind(this));
+                },
+                // 下载
+                download: function (type) {
+                    if (type === 1) {
+                        this.hasDialog = true;
+                    } else {
+                        vm.recordDownload();
+                        window.open(this.material.link);
+                    }
+                },
+                changeVal: function (opt) {
+                    if (typeof opt !== 'object') {
+                        opt = {};
+                    }
+                    var action = opt.action || '';
+                    var value = opt.value || '';
+                    this[action] && this[action](value);
+                },
+                // 关闭支付
+                payClose: function (value) {
+                    this.payment = value;
+                },
+                //关闭登录
+                loginClose: function (value) {
+                    this.loginShow = false;
+                    window.location.reload();
+                    // value && this.logComplete();
+                },
+                // 登录完成回调事件
+                logComplete: function () {
+                    $h.loadFFF();
+                    $http.baseGet($h.U({
+                        c: 'special',
+                        a: 'isMember'
+                    }), function (res) {
+                        var data = res.data.data;
+                        vm.is_member = data.is_member;
+                        vm.now_money = data.now_money;
+                    });
+                },
+                // 支付完成后回调事件
+                pay_order: function (data) {
+                    this.orderId = data.data.result.orderId || '';
+                    switch (data.data.status) {
+                        case 'PAY_ERROR':
+                        case 'ORDER_EXIST':
+                        case 'ORDER_ERROR':
+                            this.extendOrder(data.msg);
+                            break;
+                        case 'WECHAT_PAY':
+                            this.wechatPay(data.data.result.jsConfig);
+                            break;
+                        case 'WECHAT_H5_PAY':
+                            this.payment = true;
+                            window.location.href = data.data.result.jsConfig.mweb_url + '&redirect_url=' + encodeURIComponent(callback_url + '?type=8&id=' + this.material.id);
+                            break;
+                        case 'SUCCESS':
+                            this.successOrder(data.msg);
+                            break;
+                        case 'ZHIFUBAO_PAY':
+                            window.location.href=$h.U({m:'wap',c:'alipay',a:'index',q:{info:data.data.result,params:'datadownload'}});
+                            break;
+                    }
+                },
+                extendOrder: function (msg) {
+                    if (typeof msg === 'object' && msg.errMsg === 'chooseWXPay:cancel') {
+                        msg = '微信支付取消';
+                    } else {
+                        msg = '支付失败';
+                    }
+                    $h.pushMsg(msg, function () {
+                        vm.payment = true;
+                        if (vm.orderId) {
+                            $http.baseGet($h.U({
+                                c: 'special',
+                                a: 'del_order',
+                                q: {
+                                    orderId: vm.orderId
+                                }
+                            }));
+                        }
+                    });
+                },
+                wechatPay: function (config) {
+                    mapleWx($jssdk(), function () {
+                        this.chooseWXPay(config, function () {
+                            vm.successOrder();
+                        }, {
+                            fail: vm.extendOrder,
+                            cancel: vm.extendOrder
+                        });
+                    });
+                },
+                successOrder: function (msg) {
+                    $h.showMsg({
+                        title: msg ? msg : '支付成功',
+                        icon: 'success',
+                        success: function () {
+                            vm.payment = true;
+                            vm.isPay = true;
+                        }
+                    });
+                },
+                goHome: function () {
+                    window.location.href = "{$m_home_url}";
+                },
+                customerService: function () {
+                    $http.baseGet($h.U({ c: 'index', a: 'user_login' }), function () {
+                        window.location.href = "{:url('/m/service')}";
+                    }.bind(this), function () {
+                        this.loginShow = true;
+                    }.bind(this));
+                },
+                recordDownload: function () {
+                    $http.baseGet($h.U({
+                        c: 'material',
+                        a: 'userDownload',
+                        q: {
+                            id: this.material.id
+                        }
+                    }), function () {
+                        vm.material.sales++;
+                    });
+                },
+                layerPhoto: function (src) {
+                    layer.photos({
+                        photos: {
+                            data: [
+                                {
+                                    src: this.shareImage
+                                }
+                            ]
+                        },
+                        anim: 5
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

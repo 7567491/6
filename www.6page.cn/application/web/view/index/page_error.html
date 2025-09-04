@@ -1,0 +1,47 @@
+{extend name="public/container"}
+{block name="app"}
+{include file='public/top' /}
+<div class="page-404">
+    <el-empty image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/cry.png" description="{$msg}"></el-empty>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData"
+            @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin) {
+        Vue.use(ELEMENT);
+        new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+
+            },
+            computed: {
+
+            },
+            watch: {
+
+            },
+            created: function () {
+            },
+            methods: {
+
+            }
+        });
+    });
+</script>
+{/block}

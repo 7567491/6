@@ -1,0 +1,48 @@
+{extend name="public/container"}
+{block name="title"}关于我们-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-detail-wrapper">
+        <div class="wy-exam-detail-title">关于我们</div>
+        <div class="about-us-box">
+            {$content}
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+            }
+        })
+    })
+</script>
+{/block}

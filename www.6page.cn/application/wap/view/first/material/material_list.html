@@ -1,0 +1,360 @@
+
+{extend name="public/container"}
+{block name="title"}全部资料-{$Auth_site_name}{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="material-cate goodsClass indexNew">
+        <div class="header">
+            <div class="search acea-row row-middle">
+                <form class="form" @submit.prevent="search">
+                    <label class="label">
+                        <img class="img" src="{$Think.const.IMG_DOMAIN}/wap/images/search.png">
+                        <input class="input" v-model.trim="searchValue" placeholder="输入资料名称">
+                    </label>
+                    <input class="submit" type="submit" value="搜索">
+                </form>
+            </div>
+            <div class="filter-nav">
+                <div class="filter-nav-tab">
+                    <div class="filter-nav-tab-item">
+                        <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': sortPanel.show}" @click="showPanel('sort')">
+                            <p class="filter-nav-title">{{sortPanel.currentTypeName}}</p>
+                            <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                        </div>
+                    </div>
+                    <div class="filter-nav-tab-item">
+                        <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': catePanelShow}" @click="showPanel('cate')">
+                            <p class="filter-nav-title">{{cate_name}}</p>
+                            <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                        </div>
+                    </div>
+                    <div class="filter-nav-tab-item">
+                        <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': otherPanel.show}" @click="showPanel('other')">
+                            <p class="filter-nav-title">筛选</p>
+                            <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-nav-panel filter-nav-sort" :class="{'filter-nav-panel-show': sortPanel.show}">
+                    <ul class="filter-nav-menu filter-nav-sort-menu">
+                        <li
+                                v-for="item in sortPanel.list"
+                                :key="item.name"
+                                class="filter-nav-menu-item"
+                                :class="{'filter-nav-menu-item-selected': sortPanel.currentType == item.value}"
+                                @click="switchSort(item.value, item.name)"
+                        >{{item.name}}</li>
+                    </ul>
+                </div>
+                <div class="filter-nav-panel filter-nav-cate" :class="{'filter-nav-panel-show': catePanelShow}">
+                    <div class="filter-cate-inner">
+                        <ul class="filter-cate-level1">
+                            <li
+                                    v-for="(item, index) in gradeCate"
+                                    :key="item.id"
+                                    @click="switchGradeCate(item.id, index, item.title)"
+                                    :class="{'filter-cate-selected': cate_id === item.id}"
+                            >{{item.title}}</li>
+                        </ul>
+                        <ul class="filter-cate-level2">
+                            <li
+                                    v-for="(item, index) in subjectCate"
+                                    :key="item.id"
+                                    @click="switchSubjectCate(item.id, index, item.title)"
+                                    :class="{'filter-cate-selected': subject_id === item.id}"
+                            >{{item.title}}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="filter-nav-panel filter-nav-other" :class="{'filter-nav-panel-show': otherPanel.show}" style="height: 200px;">
+                    <div class="filter-other-section">
+                        <h2>收费方式</h2>
+                        <div class="filter-other-menu">
+                            <div
+                                    v-for="item in otherPanel.payList"
+                                    :key="item.name"
+                                    class="filter-other-btn"
+                                    :class="{'filter-other-btn-selected': otherPanel.is_pay === item.value}"
+                                    @click="switchPay(item.value)"
+                            >
+                                <button>{{item.name}}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-nav-mask" v-show="panelMask" @click="hidePanel"></div>
+            </div>
+        </div>
+        <div class="list">
+            <a v-for="item in materialList" :key="item.id" :href="'{:url('/m/view-virtual')}?id=' + item.id">
+                <div>
+                    <img :src="fx_cdn_img(item.image)" alt="">
+                </div>
+                <div>
+                    <div>{{ item.title }}</div>
+                    <div>
+                        <div :class="{ money: item.pay_type }">
+                            <template v-if="item.pay_type">
+                                ￥<span>{{ item.money }}</span>
+                            </template>
+                            <template v-else>
+                                免费
+                            </template>
+                        </div>
+                        <div class="material-sales">{{ item.ficti + item.sales }}人已下载</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div v-if="loading" class="loading">
+            <i class="fa fa-spinner loadingpic"></i>
+        </div>
+        <div v-if="finished && materialList.length" class="finished">已全部加载完</div>
+        <div v-if="finished && !materialList.length" class="empty">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/empty.png" alt="暂无数据">
+            <div>暂无数据</div>
+        </div>
+    </div>
+{include file="public/store_menu"}
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'swiper', 'store', 'helper','quick'], function (Vue, Swiper, $http, $h) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                page: 1,
+                limit: 16,
+                loading: false,
+                finished: false,
+                materialList: [],
+                searchValue: '',
+                cateList: [],
+                supIndex: 0,
+                subIndex: 0,
+                pid: 0,
+                cate_id: 0,
+                panelMask: false,
+                // 排序筛选面板
+                sortPanel: {
+                    show: false,
+                    currentType: '',
+                    currentTypeName: '综合排序',
+                    list: [
+                        {
+                            name: '综合排序',
+                            value: ''
+                        },
+                        {
+                            name: '下载最多',
+                            value: 'salesOrder,desc'
+                        },
+                        {
+                            name: '下载最少',
+                            value: 'salesOrder,asc'
+                        }
+                    ]
+                },
+                gradeCate: [],
+                subjectCate: [
+                    {
+                        id: 0,
+                        pid: 0,
+                        title: '全部'
+                    }
+                ],
+                cate_id: 0,
+                cate_name: '全部分类',
+                // 记录当前一级分类名，用于二级分类选择全部时显示
+                current_top_cate_name: '全部分类',
+                subject_id: 0,
+                catePanelShow: false,
+                otherPanel: {
+                    show: false,
+                    is_pay: '',
+                    payList: [
+                        {
+                            name: '免费',
+                            value: 0
+                        },
+                        {
+                            name: '付费',
+                            value: 1
+                        }
+                    ]
+                },
+                salesOrder: ''
+            },
+            created: function () {
+                this.getMaterialCate();
+                this.getMaterialList();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        this.getMaterialList();
+                    }.bind(this), false);
+                });
+            },
+            methods: {
+                resetList() {
+                    this.finished = false;
+                    this.page = 1;
+                    this.materialList = [];
+                },
+                showPanel: function (type) {
+                    this.panelMask = true;
+                    if (type === 'sort') {
+                        this.catePanelShow = false
+                        this.otherPanel.show = false
+                        this.sortPanel.show = !this.sortPanel.show;
+                        if(!this.sortPanel.show) {
+                            this.panelMask = false;
+                        }
+                    }
+                    if (type === 'cate') {
+                        this.sortPanel.show = false
+                        this.otherPanel.show = false
+                        this.catePanelShow = !this.catePanelShow;
+                        if(!this.catePanelShow) {
+                            this.panelMask = false;
+                        }
+                    }
+                    if (type === 'other') {
+                        this.sortPanel.show = false
+                        this.catePanelShow = false
+                        this.otherPanel.show = !this.otherPanel.show;
+                        if(!this.otherPanel.show) {
+                            this.panelMask = false;
+                        }
+                    }
+                },
+                hidePanel: function () {
+                    this.panelMask = false;
+                    this.sortPanel.show = false;
+                    this.catePanelShow = false;
+                    this.otherPanel.show = false
+                },
+                switchSort: function (value, name) {
+                    this.resetList();
+                    this.sortPanel.currentType = value;
+                    this.sortPanel.currentTypeName = name;
+                    this.salesOrder = '';
+                    this.scoreOrder = '';
+                    // 计算排序类型
+                    if (value !== '') {
+                        var sortType = value.split(',');
+                        this[sortType[0]] = sortType[1];
+                    }
+                    this.hidePanel();
+                    this.getMaterialList();
+                },
+                switchGradeCate: function (value, index, name) {
+                    this.resetList();
+                    this.cate_id = value;
+                    this.subject_id = 0;
+                    // 复制列表，防止多次出现全部按钮
+                    var subjectCate = JSON.parse(JSON.stringify(this.gradeCate[index]['children']));
+                    subjectCate.unshift({
+                        id: 0,
+                        pid: 0,
+                        title: '全部'
+                    });
+                    this.subjectCate = subjectCate;
+                    this.cate_name = this.current_top_cate_name = value === 0 ? '全部分类' : name;
+                    this.getMaterialList();
+                },
+                switchSubjectCate: function (value, index, name) {
+                    this.resetList();
+                    this.subject_id = value;
+                    this.cate_name = value === 0 ? this.current_top_cate_name : name;
+                    this.hidePanel();
+                    this.getMaterialList();
+                },
+                switchType: function (value) {
+                    this.resetList();
+                    if(this.otherPanel.type === value) {
+                        this.otherPanel.type = '';
+                    } else {
+                        this.otherPanel.type = value;
+                    }
+                    this.getMaterialList();
+                },
+                switchPay: function (value) {
+                    this.resetList();
+                    if(this.otherPanel.is_pay === value) {
+                        this.otherPanel.is_pay = '';
+                    } else {
+                        this.otherPanel.is_pay = value;
+                    }
+                    this.getMaterialList();
+                },
+                // 获取分类
+                getMaterialCate: function () {
+                    var vm = this;
+                    $http.baseGet($h.U({
+                        c: 'material',
+                        a: 'get_material_cate'
+                    }), function (res) {
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            vm.gradeCate = resData.data;
+                            vm.gradeCate.unshift({
+                                id: 0,
+                                pid: 0,
+                                title: '全部',
+                                children: []
+                            });
+                        } else {
+                            $h.pushMsg(resData.msg);
+                        }
+                    }, function () {
+                    });
+                },
+                // 获取列表
+                getMaterialList: function () {
+                    if (this.loading || this.finished) {
+                        return;
+                    }
+                    if (this.searchValue) {
+                        this.pid = 0;
+                        this.cate_id = 0;
+                    }
+                    this.loading = true;
+                    $http.basePost($h.U({
+                        c: 'material',
+                        a: 'get_material_list'
+                    }), {
+                        pid: this.cate_id,
+                        cate_id: this.subject_id,
+                        search: this.searchValue,
+                        page: this.page++,
+                        limit: this.limit,
+                        salesOrder: this.salesOrder,
+                        is_pay: this.otherPanel.is_pay
+                    }, function (res) {
+                        var materialList = res.data.data.data;
+                        vm.loading = false;
+                        vm.materialList = vm.materialList.concat(materialList);
+                        vm.finished = vm.limit > materialList.length;
+                    }, function () {
+                        vm.loading = false;
+                    });
+                },
+                // 搜索
+                search: function () {
+                    if ( this.loading) {
+                        return;
+                    }
+                    this.resetList();
+                    this.materialList = [];
+                    this.finished = false;
+                    this.page = 1;
+                    this.getMaterialList();
+                }
+            }
+        });
+    });
+</script>
+{/block}

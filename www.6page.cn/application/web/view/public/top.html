@@ -1,0 +1,107 @@
+<header class="zs-header fix-header">
+    <div class="index-nav">
+        <div class="logo">
+            <a href="/" target="_self" title="{$public_data.site_name}">
+                <img title="{$public_data.site_name}" src="{:get_image_src($public_data.home_logo)}">
+            </a>
+        </div>
+        <ul class="nav-item">
+            {foreach $navigation as $key=>$nav }
+            <li><a href="{$nav.link}" :class="{active: highLightNav('{$public_data['site_url'].$nav.link}')}">{$nav.title}</a></li>
+            {/foreach}
+        </ul>
+        <div class="search-warp clearfix">
+            <div class="search-area" data-search="top-banner">
+                <input class="search-input" @focus="searchResultShow = true" @blur="hideSearchResult" @keyup.enter="onSearch('')" v-model.trim="searchValue" placeholder="请输入关键字..." type="text" autocomplete="off">
+                <div class="type-switch">
+                    <el-select v-model="searchSelected" size="mini" slot="prepend">
+                        <el-option label="课程" :value="1"></el-option>
+                        <el-option label="资料" :value="2"></el-option>
+                        <el-option label="考试" :value="3"></el-option>
+                        <el-option label="测试" :value="4"></el-option>
+                    </el-select>
+                </div>
+                <div class="hotTags">
+                    {volist name="public_data.host_search" id="word" length="2"}
+                    <a href="javascript:;" @click="onSearch('{$word}')">{$word}</a>
+                    {/volist}
+                </div>
+                <div class="search-area-result nav-search-box js-search-wrap" v-show="searchResultShow">
+                    <div class="hot">
+                        <h2>热搜</h2>
+                        <div class="hot-box">
+                            {foreach $public_data.host_search as $key=>$word }
+                            <a href="javascript:;" class="hot-item js-history-search" @click="onSearch('{$word}')">{$word}</a>
+                            {/foreach}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="showhide-search" @click="onSearch('')"><i class="el-icon-search"></i></div>
+        </div>
+        <div class="login-area">
+            <div v-if="!userInfo.account" class="header-signin">
+                <a href="javascript:;" @click="loginOpen">登录/注册</a>
+            </div>
+            <ul v-else class="clearfix logined newcomer-box">
+                <li class="user-mycourse-box">
+                    <a class="user-card-item js-header-courseurl" href="{:url('/my')}?page=course">
+                        <span>我的课程</span>
+                    </a>
+                </li>
+                <li class="set_btn user-card-box" id="header-user-card">
+                    <a id="header-avator" class="user-card-item js-header-avator" href="{:url('/my')}" target="_self">
+                        <img width="40" height="40" :src="fx_cdn_img(userInfo.avatar)">
+                    </a>
+                    <div class="g-user-card">
+                        <div class="card-inner">
+                            <div class="card-top clearfix">
+                                <a class="l" href="{:url('/my')}">
+                                    <img :src="fx_cdn_img(userInfo.avatar)" :alt="userInfo.account"></a>
+                                <div class="card-top-right-box l">
+                                    <a href="{:url('/my')}"><span class="name text-ellipsis">{{userInfo.account}}</span></a>
+                                    <div class="meta">
+                                        <span v-if="userInfo.level && !userInfo.is_permanent">VIP到期时间：{{ userInfo.overdue_time }}</span>
+                                        <span v-else-if="userInfo.level && userInfo.is_permanent">永久VIP</span>
+                                        <span v-else-if="!userInfo.level && userInfo.member_time">VIP已过期</span>
+                                        <span v-else>未开通VIP</span>
+                                        <a v-if="!userInfo.level" href="{:url('/my')}?page=member">去开通<i class="el-icon-arrow-right"></i></a>
+                                        <span v-if="userInfo.level != 0">VIP</span>
+<!--                                        <a href="/u/index/experience">余额<b id="js-user-mp">{{userInfo.now_money}}</b></a>-->
+<!--                                        <a href="javascript:;">积分<b id="js-user-credit">{{userInfo.integral}}</b></a>-->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="user-center-box">
+                                <ul class="clearfix">
+                                    <li class="l">
+                                        <a href="{:url('/my')}?page=course" target="_blank">
+                                            <span class="user-center-icon el-icon-notebook-1"></span>我的课程
+                                        </a>
+                                    </li>
+                                    <li class="l">
+                                        <a href="{:url('/my')}?page=favor" target="_blank">
+                                            <span class="user-center-icon el-icon-star-off"></span>我的收藏
+                                        </a>
+                                    </li>
+                                    <li class="l">
+                                        <a href="{:url('/my')}?page=exam" target="_blank">
+                                            <span class="user-center-icon el-icon-user"></span>我的考试</a>
+                                    </li>
+                                    <li class="l">
+                                        <a href="{:url('/my')}?page=account" target="_blank">
+                                            <span class="user-center-icon el-icon-setting"></span>个人设置
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-sets clearfix">
+                                <a href="javascript:;" @click="logout" class="l">安全退出</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>

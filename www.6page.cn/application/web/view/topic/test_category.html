@@ -1,0 +1,260 @@
+{extend name="public/container"}
+{block name="title"}所有练习-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main">
+    <div class="wy-block block-selector">
+        <div class="wy-block-container">
+            <div class="wy-selector">
+                <div class="wy-selector-line" :class="{expand: expand1}">
+                    <div class="wy-selector-title">一级分类</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div
+                                    class="wy-kc-tag"
+                                    v-for="item in courseClassificationList1"
+                                    :key="item.id"
+                                    :class="{ active: item.id == filterData.pid }"
+                                    @click="filterData.pid = item.id, filterData.tid = 0, filterData.search = '', isInit=false, filterData.clicked++">
+                                {{ item.title }}
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand1=!expand1">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="wy-selector-line" :class="{expand: expand2}">
+                    <div class="wy-selector-title">二级分类</div>
+                    <div class="wy-selector-main">
+                        <div class="wy-kc-tag-group">
+                            <div
+                                    class="wy-kc-tag"
+                                    v-for="item in courseClassificationList2"
+                                    :key="item.id"
+                                    :class="{ active: item.id == filterData.tid }"
+                                    @click="filterData.tid = item.id, filterData.search = '', isInit=false, filterData.clicked++">
+                                {{ item.title }}
+                            </div>
+                        </div>
+                        <div class="wy-selector-aside">
+                            <div class="wy-selector-more" @click="expand2=!expand2">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="wy-block block-list">
+        <div class="wy-block-container">
+            <div v-if="examList.length" class="switch-panel">
+                <ul class="wy-test-list">
+                    <li v-for="item in examList" :key="item.id">
+                        <a href="javascript:;" @click="goNext('{:url('/test')}?id=' + item.id)">
+                            <div class="wy-test-title">
+                                {{ item.title }}
+                            </div>
+                            <div class="wy-test-info">
+                                <div class="wy-test-meta">
+                                    <div class="wy-test-meta-item">
+                                        题目数：{{ item.item_number }}道
+                                    </div>
+                                    <div class="wy-test-meta-item">
+                                        难度等级：{{ item.difficulty }}星
+                                    </div>
+                                    <div class="wy-test-meta-item">
+                                        答题人数：{{ item.answer }}人
+                                    </div>
+                                </div>
+                                <el-button size="mini" type="primary" icon="el-icon-edit" round>答题</el-button>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <el-empty v-if="!examList.length" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="暂无考试～"></el-empty>
+            <div v-if="examList.length" class="pagination">
+                <el-pagination :current-page.sync="filterData.page" :page-size="filterData.limit"
+                               layout="prev, pager, next" :total="total">
+                </el-pagination>
+            </div>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData"
+            @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/exam',
+        'scripts/util',
+        'api/home',
+        'css!styles/classification.css'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, examApi, util, homeApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                isInit: true,
+                filterData: {
+                    pid: 0,
+                    tid: 0,
+                    page: 1,
+                    limit: 16,
+                    is_pay: '',
+                    salesOrder: '',
+                    scoreOrder: '',
+                    search: '',
+                    clicked: 0
+                },
+                sort: '',
+                courseClassificationList1: [
+                    {
+                        title: '全部',
+                        id: 0,
+                        children: []
+                    }
+                ],
+                examList: [],
+                total: 0,
+                flag1: false,
+                flag2: false,
+                expand1: false,
+                expand2: false,
+                expand3: false,
+                expand4: false,
+            },
+            computed: {
+                courseClassificationList2: function () {
+                    var vm = this;
+                    var courseClassificationListItem = this.courseClassificationList1.find(function (item) {
+                        return vm.filterData.pid == item.id;
+                    });
+                    var result = [
+                        {
+                            title: '全部',
+                            id: 0
+                        }
+                    ];
+                    if (courseClassificationListItem) {
+                        return result.concat(courseClassificationListItem.children);
+                    }
+                    return result;
+                }
+            },
+            watch: {
+                filterData: {
+                    handler: function (newVal, oldVal) {
+                        this.get_test_list();
+                    },
+                    deep: true
+                },
+                courseClassificationList2: function () {
+                    this.flag2 = false;
+                },
+                'filterData.search': function (val) {
+                    if (!val) {
+                        this.$refs.baseHeader.searchValue = '';
+                    }
+                }
+            },
+            created: function () {
+                var search = util.getParmas('search');
+                var pid = util.getParmas('pid');
+                var tid = util.getParmas('tid');
+                this.get_all_test_cate();
+                if (search) {
+                    this.isInit = false
+                    return this.filterData.search = search;
+                }
+                if (pid && tid) {
+                    this.filterData.pid = pid;
+                    return this.filterData.tid = tid;
+                }
+                this.get_test_list();
+            },
+            methods: {
+                goNext(url) {
+                    var vm = this;
+                    homeApi.user_login().then(function () {
+                        window.location.href = url
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 分类
+                get_all_test_cate: function () {
+                    examApi.get_test_cate({
+                        type: 1
+                    }).then(function (res) {
+                        var cate = res.data
+                        if (cate.length) {
+                            for (var i = 0; i < cate.length; i++) {
+                                for (var j = 0; j < cate[i].children.length; j++) {
+                                    vm.courseClassificationList1[0].children.push(cate[i].children[j])
+                                }
+                            }
+                        }
+                        vm.courseClassificationList1 = vm.courseClassificationList1.concat(cate);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 列表
+                get_test_list: function () {
+                    examApi.get_test_list(this.filterData, 1).then(function (res) {
+                        vm.examList = res.data.list;
+                        vm.total = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 更多
+                handleShowMoreThan: function (state) {
+                    if (state === 1) {
+                        if (this.$refs.itemContent1.scrollHeight === this.$refs.itemContent1.offsetHeight && !this.flag1) {
+                            return;
+                        }
+                        this.flag1 = !this.flag1;
+                    } else if (state === 2) {
+                        if (this.$refs.itemContent2.scrollHeight === this.$refs.itemContent2.offsetHeight && !this.flag2) {
+                            return;
+                        }
+                        this.flag2 = !this.flag2;
+                    }
+                },
+                // 搜索
+                submitSearch: function (value) {
+                    this.filterData.pid = 0;
+                    this.filterData.tid = 0;
+                    this.filterData.type = '';
+                    this.filterData.is_pay = '';
+                    this.filterData.salesOrder = '';
+                    this.filterData.scoreOrder = '';
+                    this.filterData.search = value;
+                    this.sort = '';
+                }
+            }
+        });
+    });
+</script>
+{/block}

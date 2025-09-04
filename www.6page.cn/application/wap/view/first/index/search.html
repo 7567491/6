@@ -1,0 +1,223 @@
+
+{extend name="public/container"}
+{block name="title"}搜索-{$Auth_site_name}{/block}
+{block name="content"}
+<style>
+    body{
+        background-color: #f5f5f5;
+    }
+    .goodsClass{
+        padding-top: 0;
+        min-height: auto;
+    }
+    form,.section{
+        background-color: #fff;
+    }
+    .nothing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 4.14rem;
+        -webkit-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+    .search-words{
+        position: absolute;
+        top: 0.84rem;
+        left: 0;
+        right: 0;
+        z-index: 10;
+    }
+</style>
+<div v-cloak id="app" class="search-page">
+    <form @submit.prevent="goSearch()">
+        <label>
+            <i class="iconfont iconsousuo"></i>
+            <input v-model.trim="search" type="search" placeholder="请输入课程名称" @focus="onfocus" @blur="onblur">
+            <i v-show="search" class="iconfont iconguanbi2" @click="search = ''"></i>
+        </label>
+        <input type="submit" value="搜索">
+    </form>
+    <div class="search-words" v-show="showWords">
+        <div v-if="historyList.length" class="section">
+            <div class="title">
+                <div class="text">历史记录</div>
+                <i class="iconfont iconshanchu" @click="deleteHistory"></i>
+            </div>
+            <div class="content">
+                <span v-for="(item, index) in historyList" :key="index" @click="goSearch(item.search)">{{ item.search }}</span>
+            </div>
+        </div>
+        <div v-if="hotList.length" class="section">
+            <div class="title">
+                <div class="text">热门搜索</div>
+            </div>
+            <div class="content">
+                <span v-for="(item, index) in hotList" :key="index" @click="goSearch(item)">{{ item }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="goodsClass indexNew" @click="showWords=false">
+        <div class="interest english">
+            <div class="list acea-row row-between-wrapper">
+                <a
+                        v-for="item in updateSpecialList" :key="item.id" :href="item.is_light ? '{:url('/m/single-course')}?id=' + item.id : '{:url('/m/view-course')}?id=' + item.id"
+                        class="item"
+                >
+                    <div class="pictrue">
+                        <img :src="fx_cdn_img(item.image)" :alt="item.title">
+                        <div class="label">{{ item.special_type }}</div>
+                    </div>
+                    <div class="text">
+                        <div class="title acea-row row-middle">
+                            <div class="name line1" v-text="item.title"></div>
+                        </div>
+                        <div class="group acea-row row-middle row-between">
+                            <div>
+                                <div class="money" v-if="item.money > 0">¥<span class="num">{{item.money}}</span></div>
+                                <div class="free" v-else>免费</div>
+                            </div>
+                            <div class="total">{{item.browse_count}}人已报名</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div v-if="loadend && !specialList.length">
+            <img class="nothing"  src="{$Think.const.IMG_DOMAIN}/wap/images/no_data_available.png">
+        </div>
+        <p v-else class="loading-line">
+            <span v-show="loading" class="fa fa-spinner loadingpic" style="font-size: 0.4rem;"></span>
+            <span v-text="loadTitle">加载更多</span>
+        </p>
+    </div>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'store', 'axios', 'special-type'], function (Vue, store, axios, specialType) {
+        new Vue({
+            el: '#app',
+            data: {
+                search: '',
+                loading: false,
+                loadend: false,
+                loadTitle: '',
+                historyList: [],
+                hotList: [],
+                specialList: [],
+                limit: 10,
+                singleDetailsURL: '',
+                detailsURL: '',
+                isEmpty: false,
+                showWords: true,
+                preventScrollLoad: true
+            },
+            computed: {
+                updateSpecialList: function () {
+                    return this.specialList.map(function (value) {
+                        value.special_type = specialType[value.type];
+                        return value;
+                    });
+                }
+            },
+            created: function () {
+                this.getSearchHistory();
+                this.getHotSearch();
+                this.singleDetailsURL = "{:url('/m/single-course')}";
+                this.detailsURL = "{:url('/m/view-course')}";
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        if (!this.search) return;
+                        this.getSpecialList();
+                    }.bind(this), false);
+                });
+            },
+            methods: {
+                onfocus() {
+                    this.showWords = true
+                },
+                onblur() {
+                },
+                resetList() {
+                    this.loadend = false;
+                    this.page = 1;
+                    this.specialList = [];
+                },
+                // 获取搜索历史
+                getSearchHistory: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'index',
+                        a: 'get_search_history'
+                    }), function (res) {
+                        vm.historyList = res.data.data;
+                    });
+                },
+                // 获取热门搜索
+                getHotSearch: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'index',
+                        a: 'get_host_search'
+                    }), function (res) {
+                        vm.hotList = res.data.data;
+                    });
+                },
+                goSearch: function (search) {
+                    this.search = search ? search : this.search
+                    if (!this.search) {
+                        $h.pushMsg('请输入搜索词');
+                        return
+                    };
+                    this.showWords = false
+                    this.resetList();
+                    this.getSpecialList();
+                },
+                // 课程列表
+                getSpecialList: function () {
+                    if (this.loading || this.loadend) {
+                        return;
+                    };
+                    this.loading = true;
+                    this.loadTitle = '';
+                    var vm = this
+                    axios.get("{:url('special/get_special_list')}", {
+                        params: {
+                            search: this.search,
+                            page: this.page++,
+                            limit: this.limit
+                        }
+                    }).then(function (res) {
+                        vm.loading = false;
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            var data = resData.data.data;
+                            vm.specialList = vm.specialList.concat(data);
+                            vm.loadend = vm.limit > data.length;
+                            vm.loadTitle = vm.loadend ? '已全部加载完' : '上拉加载更多';
+                        } else {
+                            $h.pushMsg(resData.msg);
+                        }
+                    }).catch(function () {
+                        vm.loading = false;
+                    });
+                },
+                // 删除搜索历史
+                deleteHistory: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'index',
+                        a: 'del_search_history'
+                    }), function () {
+                        vm.historyList = [];
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    {include file="public/head" /}
+    <title>登录-{$site_name}</title>
+    <meta name="keywords" content="{$seo_keywords}">
+    <meta name="description" content="{$seo_description}">
+    {include file="public/style" /}
+
+    {if ($slide_captcha == 1)}
+    <link rel="stylesheet" type="text/css" href="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}static/captcha/css/verify.css">
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}static/captcha/js/jquery.min.js" ></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}static/captcha/js/crypto-js.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}static/captcha/js/ase.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}static/captcha/js/verify.js"></script>
+    <script type="text/javascript">
+        var slide_captcha = {$slide_captcha};
+        var slide_captcha_api = "{$slide_captcha_api}";
+    </script>
+    {/if}
+    <script type="text/javascript">
+        var login_types = {$login_types};
+    </script>
+
+    <script src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/requirejs/require.js"></script>
+    <script>
+        require.config({
+            urlArgs: 'bust=' + (new Date()).getTime(),
+            baseUrl: '{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc',
+            map: {
+                '*': {
+                    'css': 'plugins/require-css/css'
+                }
+            },
+            shim: {
+                'ELEMENT': {
+                    deps: [
+                        'vue',
+                        'css!element-ui/lib/theme-chalk/index.css',
+                        'css!styles/element-ui.css'
+                    ]
+                },
+                'swiper': {
+                    deps: [
+                        'css!plugins/swiper/css/swiper.min.css'
+                    ]
+                },
+                'qrcode': {
+                    exports: 'QRCode'
+                }
+            },
+            paths: {
+                'vue': 'vue/dist/vue.min',
+                'ELEMENT': 'element-ui/lib/index',
+                'text': 'plugins/text/text',
+                'axios': 'plugins/axios/dist/axios.min',
+                'swiper': 'plugins/swiper/js/swiper.min',
+                'qrcode': 'plugins/qrcodejs/qrcode.min',
+                'components': 'components'
+            }
+        });
+        var router = {
+            home: "{:url('/index')}",
+            user: "{:url('/my')}",
+            live: "{:url('/live')}",
+            live_room: "{:url('/live-room')}",
+            course: "{:url('/course')}",
+            view_course: "{:url('/view-course')}",
+            single_course: "{:url('/single-course')}",
+            virtual: "{:url('/virtual')}",
+            view_virtual: "{:url('/view-virtual')}",
+            articles: "{:url('/articles')}",
+            view_article: "{:url('/view-article')}",
+            teachers: "{:url('/teachers')}",
+            view_teacher: "{:url('/view-teacher')}",
+            lesson: "{:url('/lesson')}",
+
+            special_live: "{:url('/live')}",
+            special_cate: "{:url('/course')}",
+            special_details: "{:url('/view-course')}",
+            single_details: "{:url('/single-course')}",
+            task_info: "{:url('/lesson')}",
+            material_list: "{:url('material/material_list')}",
+            material_details: "{:url('/view-virtual')}",
+            news_list: "{:url('/articles')}",
+            news_detail: "{:url('article/news_detail')}",
+            payment: "{:url('/pay')}",
+            teacher_list: "{:url('/teachers')}",
+            teacher_detail: "{:url('/view-teacher')}",
+            more_list: "{:url('index/more_list')}"
+        };
+    </script>
+</head>
+<body>
+<div v-cloak id="app">
+    <div class="wy-login">
+        <div class="wy-login-inner">
+            <div class="wy-login-logo">
+                <a href="{$site_url}">
+                    <img src="{$home_logo}" title="{$site_name}" alt="{$site_name}" />
+                </a>
+            </div>
+            <login-form :agree-content="agreeContent" :public-data="publicData" @agree-open="agreeOpen"></login-form>
+        </div>
+    </div>
+    <base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+</div>
+</body>
+</html>
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/login_form/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'scripts/util'
+    ], function (Vue, ELEMENT, LoginForm, BaseAgree, baseMixin) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'login-form': LoginForm,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin],
+            data: {
+            },
+            created: function () {
+            },
+            methods: {
+            }
+        });
+    });
+</script>

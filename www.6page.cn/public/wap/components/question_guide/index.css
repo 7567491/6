@@ -1,0 +1,31 @@
+.question-guide {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 56;
+    padding-top: 2.4rem;
+    background: url("../../images/guide1.png") .55rem top/1.5rem .8rem no-repeat,
+                url("../../images/guide2.png") center .28rem/ 1.2rem 1.32rem no-repeat,
+                url("../../images/guide3.png") 4.15rem top/1.5rem .8rem no-repeat;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    font-size: .28rem;
+    text-align: center;
+    color: #fff;
+}
+
+.question-guide button {
+    width: 6.2rem;
+    height: .86rem;
+    border-radius: .43rem;
+    margin-top: 1.05rem;
+    background-color: #fff;
+    font-family: inherit;
+    font-weight: normal;
+    font-size: .28rem;
+    color: #282828;
+}
+
+.mask {
+    background-color: rgba(0, 0, 0, .6);
+}

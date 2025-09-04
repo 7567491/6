@@ -1,0 +1,100 @@
+{extend name="public/container"}
+{block name="title"}课程兑换-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main">
+    <div class="wy-block">
+        <div class="wy-block-container">
+            <div class="exchange-wrapper">
+                <div class="exchange-inner">
+                    <h1>课程兑换</h1>
+                    <el-form>
+                        <el-form-item>
+                            <el-input v-model="code" type="number" maxlength="6" placeholder="请输入兑换码"></el-input>
+                        </el-form-item>
+                        <el-form-item class="exchange-button">
+                            <el-button class="exchange-submit" type="primary" round @click="exchange()">立即兑换</el-button>
+                        </el-form-item>
+                    </el-form>
+                    <div class="exchange-tips">
+                        <h3>温馨提示</h3>
+                        <div class="exchange-tips-item">每个兑换码只能兑换一次；</div>
+                        <div class="exchange-tips-item">一码一课，输入兑换码后自动兑换对应课程；</div>
+                        <div class="exchange-tips-item">兑换码活动期间有效，活动结束后兑换码失效，请及时兑换课程；</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_header/index',
+        'components/base_footer/index',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/auth',
+        'scripts/util',
+        'api/home',
+        'api/special',
+    ], function (Vue, ELEMENT, BaseHeader, BaseFooter, BaseLogin, BaseAgree, baseMixin, routerMixin, authApi, util, homeApi, specialApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-header': BaseHeader,
+                'base-footer': BaseFooter,
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                code: '',
+                loginVisible: false
+            },
+            created: function () {
+            },
+            methods: {
+                // 兑换码
+                exchange: function () {
+                    var vm = this;
+                    homeApi.user_login().then(function () {
+                        specialApi.exchange_submit({
+                            special_id: vm.id,
+                            code: vm.code
+                        }).then(function (res) {
+                            vm.$confirm('恭喜，您已成功兑换课程《' + res.data.title + '》', '兑换成功', {
+                                confirmButtonText: '查看课程',
+                                cancelButtonText: '继续兑换',
+                                type: 'success'
+                            }).then(function (){
+                                if (res.data.is_light) {
+                                    window.location.href = '{:url("/single-course")}?id=' + res.data.id;
+                                } else {
+                                    window.location.href = '{:url("/view-course")}?id=' + res.data.id;
+                                }
+                            }).catch(function (){
+
+                            });
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginVisible = true
+                    });
+                },
+            }
+        });
+    });
+</script>
+{/block}

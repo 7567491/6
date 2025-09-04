@@ -1,0 +1,75 @@
+<div class="base-header">
+    <div class="button-bar">
+        <div class="bar-inner">
+            <el-button-group class="group-left">
+                <el-button type="text" icon="el-icon-star-off" @click="addFavorite">收藏本站</el-button>
+                <el-button v-if="!isHomePage" type="text" icon="el-icon-house" @click="goPage('home')">返回首页</el-button>
+            </el-button-group>
+            <el-button-group class="group-right">
+                <a v-if="userInfo.account" :href="router.user">
+                    <el-avatar :size="22" :src="userInfo.avatar"></el-avatar>
+                    {{ userInfo.account }}
+                </a>
+                <el-button v-else type="text" @click="$emit('login-open')">登录/注册</el-button>
+                <el-button @click="goPage('member')" type="text">会员中心</el-button>
+                <el-button @click="goPage('course')" type="text">我的课程</el-button>
+            </el-button-group>
+        </div>
+    </div>
+    <div class="logo-search">
+        <el-image v-if="publicData.home_logo" :src="publicData.home_logo" fit="cover" @click.native="goPage('home')"></el-image>
+        <div class="search">
+            <el-input v-model.trim="searchValue" placeholder="请输入搜索内容">
+                <el-select v-model="selected" slot="prepend">
+                    <el-option v-for="option in options" :key="option.value" :label="option.label"
+                               :value="option.value"></el-option>
+                </el-select>
+                <el-button slot="append" @click="onSearch('')">搜索</el-button>
+            </el-input>
+            <el-button-group>
+                <el-button v-for="(item, index) in publicData.host_search" :key="index" type="text" @click="onSearch(item)">{{ item }}
+                </el-button>
+            </el-button-group>
+        </div>
+    </div>
+    <div class="nav-wrapper" :hidden="isUserPage">
+        <div class="category" @mouseenter="categoryMouseenter" @mouseleave="categoryMouseleave">
+            <el-button>课程分类</el-button>
+            <div :class="{ on: categoryVisible }" class="wrapper">
+                <div class="menu" @mouseenter="menuMouseenter" @mouseleave="menuMouseleave">
+                    <el-button v-for="(item, index) in publicData.grade_cate" :key="item.id" :class="{ on: menuOn === index }"
+                               type="text" @mouseenter.native="menuOn = index">{{ item.name }}<i
+                            class="el-icon-arrow-right el-icon--right"></i></el-button>
+                </div>
+                <div class="content" @mouseenter="contentMouseenter" @mouseleave="contentMouseleave">
+                    <div v-for="(item, index) in publicData.grade_cate" v-show="menuOn === index" :key="item.id">
+                        <div v-if="item.children.length" class="wrap">
+                            <div class="title">{{ item.name }}</div>
+                            <div>
+                                <el-link v-for="children in item.children" :key="children.id" :href="router.special_cate + '?cate_id=' + children.grade_id + '&subject_id=' + children.id" :underline="false">{{
+                                    children.name }}
+                                </el-link>
+                            </div>
+                        </div>
+                        <div v-if="item.list.length" class="wrap special">
+                            <div class="title">推荐课程</div>
+                            <div>
+                                <a v-for="(special, index) in item.list" v-if="index < 3" :key="special.id" :href="router.special_details + '?id=' + special.id">
+                                    <el-image :src="special.image" fit="cover"></el-image>
+                                    <div>
+                                        <div>
+                                            <div>{{ special.title }}</div>
+                                            <div>￥<span>{{ special.money }}</span></div>
+                                        </div>
+                                        <div>{{ special.browse_count }}人已学习</div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <el-link v-for="item in publicData.navList" :key="item.id" :class="{ on: item.link == currentURL }" :href="item.link" :underline="false">{{ item.title }}</el-link>
+    </div>
+</div>

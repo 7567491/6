@@ -1,0 +1,243 @@
+
+{extend name="public/container"}
+{block name="title"}{$type==1 ? '所有练习' : '所有考试'}-{$Auth_site_name}{/block}
+{block name="head"}<style></style>{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="question-category-page goodsClass indexNew">
+        <div class="header">
+            <div class="search acea-row row-middle">
+                <form class="form" @submit.prevent="onSearch">
+                    <label class="label">
+                        <img class="img" src="{$Think.const.IMG_DOMAIN}/wap/images/search.png">
+                        <input class="input" v-model.trim="search" placeholder="请输入名称">
+                    </label>
+                    <input class="submit" type="submit" value="搜索">
+                </form>
+            </div>
+            <div class="filter-nav">
+                <div class="filter-nav-tab">
+                    <div class="filter-nav-tab-item">
+                        <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': catePanelShow}" @click="showPanel('cate')">
+                            <p class="filter-nav-title">{{cate_name}}</p>
+                            <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-nav-panel filter-nav-cate" :class="{'filter-nav-panel-show': catePanelShow}">
+                    <div class="filter-cate-inner">
+                        <ul class="filter-cate-level1">
+                            <li
+                                    v-for="(item, index) in gradeCate"
+                                    :key="item.id"
+                                    @click="switchGradeCate(item.id, index, item.title)"
+                                    :class="{'filter-cate-selected': cate_id === item.id}"
+                            >{{item.title}}</li>
+                        </ul>
+                        <ul class="filter-cate-level2">
+                            <li
+                                    v-for="(item, index) in subjectCate"
+                                    :key="item.id"
+                                    @click="switchSubjectCate(item.id, index, item.title)"
+                                    :class="{'filter-cate-selected': subject_id === item.id}"
+                            >{{item.title}}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="filter-nav-mask" v-show="panelMask" @click="hidePanel"></div>
+            </div>
+        </div>
+        <div class="question-list">
+            <ul v-if="type == 1" class="problem">
+                <li v-for="item in question" :key="item.id" @click="view('{:url('/m/test')}?id=' + item.id)">
+                    <div>{{ item.title }}</div>
+                    <div>
+                        <div>共{{ item.item_number }}题</div>
+                        <div>{{ item.answer }}人已答题</div>
+                        <a :href="'{:url('/m/test')}?id=' + item.id">练习</a>
+                    </div>
+                </li>
+            </ul>
+            <ul v-else class="question">
+                <li v-for="item in question" :key="item.id" @click="view('{:url('/m/exam')}?id=' + item.id)">
+                    <div>
+                        <img :src="fx_cdn_img(item.image)">
+                    </div>
+                    <div>
+                        <div>{{ item.title }}</div>
+                        <div v-if="item.pay_type">￥<span>{{ item.money }}</span></div>
+                        <div v-else class="free">免费</div>
+                        <div>
+                            {{ item.answer }}人已答题
+                            <a :href="'{:url('/m/exam')}?id=' + item.id">答题</a>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div v-if="loading" class="loading">
+            <i class="fa fa-spinner loadingpic"></i>
+        </div>
+        <div v-if="finished && question.length" class="finished">已全部加载完</div>
+        <div v-if="finished && !question.length" class="empty">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/empty.png" alt="暂无数据">
+            <div>暂无数据</div>
+        </div>
+    </div>
+{include file="public/store_menu"}
+</div>
+<script>
+    require([
+        'vue',
+        'swiper',
+        'helper',
+        'store',
+        'quick'
+    ], function (Vue, Swiper, $h, $http) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                swiperOptions: {
+                    slidesPerView: 'auto',
+                    freeMode: true,
+                    observer: true
+                },
+                navSup: [],
+                navSub: [],
+                indexSup: 0,
+                indexSub: 0,
+                type: 1,
+                page: 1,
+                limit: 15,
+                loading: false,
+                finished: false,
+                question: [],
+                current: {},
+                search: '',
+                // 一级分类id
+                cate_id: 0,
+                cate_name: '全部分类',
+                // 记录当前一级分类名，用于二级分类选择全部时显示
+                current_top_cate_name: '全部分类',
+                // 二级分类id
+                subject_id: 0,
+                panelMask: false,
+                gradeCate: [],
+                subjectCate: [
+                    {
+                        id: 0,
+                        pid: 0,
+                        title: '全部'
+                    }
+                ],
+                catePanelShow: false,
+            },
+            created: function () {
+                this.type = $h.getParmas('type');
+                this.getCategory();
+                this.getQuestion();
+            },
+            mounted: function () {
+            },
+            methods: {
+                view(link){
+                    window.location.href = link;
+                },
+                resetList() {
+                    this.finished = false;
+                    this.page = 1;
+                    this.question = [];
+                },
+                showPanel: function (type) {
+                    this.panelMask = true;
+                    if (type === 'cate') {
+                        this.catePanelShow = !this.catePanelShow;
+                        if(!this.catePanelShow) {
+                            this.panelMask = false;
+                        }
+                    }
+                },
+                hidePanel: function () {
+                    this.panelMask = false;
+                    this.catePanelShow = false;
+                },
+                switchGradeCate: function (value, index, name) {
+                    this.resetList();
+                    this.cate_id = value;
+                    this.subject_id = 0;
+                    // 复制列表，防止多次出现全部按钮
+                    var subjectCate = JSON.parse(JSON.stringify(this.gradeCate[index]['children']));
+                    subjectCate.unshift({
+                        id: 0,
+                        pid: 0,
+                        title: '全部'
+                    });
+                    this.subjectCate = subjectCate;
+                    this.cate_name = this.current_top_cate_name = value === 0 ? '全部分类' : name;
+                    this.getQuestion();
+                },
+                switchSubjectCate: function (value, index, name) {
+                    this.resetList();
+                    this.subject_id = value;
+                    this.cate_name = value === 0 ? this.current_top_cate_name : name;
+                    this.hidePanel();
+                    this.getQuestion();
+                },
+                getCategory: function () {
+                    var vm = this;
+                    $http.baseGet($h.U({
+                        c: 'topic',
+                        a: 'testPaperCate',
+                        q: {
+                            type: this.type
+                        }
+                    }), function (res) {
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            vm.gradeCate = resData.data;
+                            vm.gradeCate.unshift({
+                                id: 0,
+                                pid: 0,
+                                title: '全部',
+                                children: []
+                            });
+                        } else {
+                            $h.pushMsg(resData.msg);
+                        }
+                    });
+                },
+                getQuestion: function () {
+                    if (this.loading || this.finished) {
+                        return;
+                    }
+                    this.loading = true;
+                    $http.basePost($h.U({
+                        c: 'topic',
+                        a: 'practiceList?type=' + this.type,
+                    }), {
+                        page: this.page++,
+                        limit: this.limit,
+                        pid: this.cate_id,
+                        tid: this.subject_id,
+                        search: this.search
+                    }, function (res) {
+                        vm.question = vm.question.concat(res.data.data);
+                        vm.loading = false;
+                        vm.finished = vm.limit > res.data.data.length;
+                    });
+                },
+                onSearch: function () {
+                    this.indexSup = 0;
+                    this.indexSub = 0;
+                    this.current = vm.navSub[0];
+                    this.question = [];
+                    this.loading = false;
+                    this.finished = false;
+                    this.page = 1;
+                    this.getQuestion();
+                }
+            }
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,1248 @@
+{extend name="public/container"}
+{block name="title"}{$course_info['title']}-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+{empty name="error"}
+<div class="global-main course-detail">
+    <div class="banner-wrap">
+        <div class="course-banner--pay">
+            <div class="course-banner-bg" style="background-image:url({:str_replace('\\\\','/',get_image_src($course_info.image))})"></div>
+            <div class="course-banner-hd">
+                <div class="breadcrumb">
+                    <a href="{:url('/course')}">全部课程</a>
+                    <span><i class="el-icon-arrow-right"></i></span>
+                    <a href="javascript:;" rel="nofollow">{$course_info['subject']['name']}</a>
+                    <span><i class="el-icon-arrow-right"></i></span>
+                    <a href="javascript:;" rel="nofollow">{$course_info['title']}</a>
+                </div>
+                <div class="section-corner">
+                    <button type="button" class="btn-fav" @click="collect">
+                        <span class="icon-fav" style="font-size:16px">
+                            <i class="el-icon-star-off"></i> {$course_info.collect ? '已收藏': '收藏'}
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <div class="course-banner-inner">
+                <div class="course-banner-row">
+                    <div class="section-left">
+                        <div class="cover-pay-wrapper" style="background-image:url({:str_replace('\\\\','/',get_image_src($course_info.image))})"></div>
+                    </div>
+                    <div class="section-right">
+                        <h3 class="course-title">{$course_info['title']}</h3>
+                        <div class="course-highlights">
+                            <div class="highlight-item highlight-tsci">
+                                <span style="font-size: 16px; margin-right: 4px;">
+                                    <i class="el-icon-s-custom"></i>
+                                </span>
+                                <span class="highlight-des">{$lecturer ? $lecturer['lecturer_name'] : '官方出品'}</span>
+                            </div>
+                        </div>
+                        <section class="term-switch">
+                            <div class="dropdown term-dropdown">
+                                <div class="dropdown-wrap">
+                                    <p class="kc-course-brand-training-wrapper training-cycle  is-learn">
+                                        <span class="training-tt">有效期: </span>
+                                        <span class="training-bd">
+                                            {eq name="special.validity" value="-1"}
+                                                {eq name="course_info.validity" value="0"}
+                                                    一次购买，永久有效
+                                                    {else/}
+                                                    有效期{$course_info.validity}天，过期需重新购买
+                                                {/eq}
+                                            {/eq}
+                                            {eq name="special.validity" value="0"}
+                                            已购买，永久有效
+                                            {/eq}
+                                            {gt name="special.validity" value="0"}
+                                            已购买，剩余有效期{{ {$special.validity} | validityFormat }}
+                                            {/gt}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                        <ul class="course-labels">
+                            {foreach $course_info.label as $key=>$labelItem}
+                            <li class="ke-btn course-label">
+                                <a href="javascript:;" rel="nofollow">{$labelItem}</a>
+                            </li>
+                            {/foreach}
+                        </ul>
+                        <p class="course-hints">
+                        {neq name="course_info.type" value="4"}
+                            <span>
+                                <span class="num">{{ courses }}</span>节课程
+                            </span>
+                        {/neq}
+                            <span>
+                                <span class="num">{$course_info.score}</span>课程评分
+                            </span>
+                            <span>
+                                <span class="num">{$special.recordCoujnt}</span>人已学
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="section-apply">
+                    <div class="apply-bar-workspace apply-bar">
+                        <div class="apply-bar-main">
+                            <div class="main-left">
+                                <div class="js-course-price normal-course course-price">
+                                    {eq name="course_info.pay_type" value="1"}
+                                    <p class="price-container">¥{$course_info.money}</p>
+                                        {neq name="course_info.member_money" value="course_info.money"}
+                                        <p class="dividing">|</p>
+                                        <span class="kc-vip-price">
+                                            <span class="kc-vip-label">VIP</span>
+                                            <span class="kc-vip-num">{$course_info.member_pay_type ? '¥'.$course_info.member_money : '免费'}</span>
+                                        </span>
+                                        {/neq}
+                                    {/eq}
+                                    {eq name="course_info.pay_type" value="0"}
+                                    <p class="price-container" style="font-weight: normal">免费</p>
+                                    {/eq}
+                                    {eq name="course_info.pay_type" value="2"}
+                                    <p class="price-container" style="font-weight: normal">加密</p>
+                                    {/eq}
+                                </div>
+                            </div>
+                            <div class="general-btn institution-btn">
+                                    {if condition="(!$course_info.pay_type) OR ($course_info.pay_type ==2) OR ($special.isPay ==2) OR (!$course_info.member_pay_type AND $special.is_member)"}
+                                        {eq name="course_info.type" value="4"}
+                                            <button type="button" class="general-btn-main institution-btn-main" @click="goLiveRoom">
+                                                    <span class="general-btn-txt institution-btn-txt">进入直播间</span>
+                                            </button>
+                                         {else /}
+                                            <button type="button" class="general-btn-main institution-btn-main" @click="learn">
+                                                <span class="general-btn-txt institution-btn-txt">{$course_info.pay_type ? '去学习' : '免费学习'}</span>
+                                            </button>
+                                        {/eq}
+                                        {else /}
+                                        <button type="button" class="general-btn-main institution-btn-main" @click="goPayment">
+                                            <span class="general-btn-txt institution-btn-txt">立即购买</span>
+                                        </button>
+                                    {/if}
+                            </div>
+                        </div>
+                        <div class="apply-bar-suffix">
+                            <div class="basic-bar-layout-mores"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section-main">
+        <div class="detail js-hook-detail">
+            <div class="detail-tabs">
+                <div class="tabs-container" ref="container">
+                    <div class="tabs-wrap">
+                        <div class="detail-tab" :class="{active: currentTab=='intro'}" @click="currentTab='intro'">课程介绍</div>
+                        {neq name="course_info.type" value="4"}
+                        <div class="detail-tab" :class="{active: currentTab=='list'}" @click="currentTab='list'">
+                            <span class="catalog-tab-title has-trial">课程目录</span>
+                        </div>
+                        {/neq}
+                        {eq name="course_info.type" value="4"}
+                        <div class="detail-tab" :class="{active: currentTab=='replay'}" @click="currentTab='replay'">
+                            <span class="catalog-tab-title has-trial">直播回放</span>
+                        </div>
+                        {/eq}
+                        {eq name="course_info.type" value="5"}
+                        <div class="detail-tab" :class="{active: currentTab=='package'}" @click="currentTab='package'">
+                            <span class="catalog-tab-title has-trial">套餐课程</span>
+                        </div>
+                        {/eq}
+                        <div v-if="testList.length" class="detail-tab" :class="{active: currentTab=='test'}" @click="currentTab='test'">
+                            <span class="catalog-tab-title has-trial">练习</span>
+                        </div>
+                        <div v-if="examList.length" class="detail-tab" :class="{active: currentTab=='exam'}" @click="currentTab='exam'">
+                            <span class="catalog-tab-title has-trial">考试</span>
+                        </div>
+                        {eq name="comment_switch" value="1"}
+                        <div class="detail-tab" :class="{active: currentTab=='comment'}" @click="currentTab='comment'">
+                            用户评价
+                            <span>({{replyData.whole}})</span>
+                        </div>
+                        {/eq}
+                    </div>
+                </div>
+            </div>
+            <div class="detail-tab-panel-container">
+                <div class="switch-panel" v-show="currentTab=='intro'">
+                    <div class="course-detail">
+                        {$course_info.content}
+                    </div>
+                </div>
+                <!--课程目录-->
+                {neq name="course_info.type" value="4"}
+                <div class="switch-panel" v-show="currentTab=='list'">
+                    <!-- 专栏课程目录 -->
+                    {eq name="course_info.type" value="5"}
+                    <template v-if="courseList.length">
+                    <div v-for="item in courseList" :key="item.id" :class="{ isShowList: item.flag }" class="section-wrapper">
+                        <div class="section-info-wrapper" @click="selectCourse(item)">
+                            <div class="section-info-main">
+                                <span class="section-title">{{ item.title }}</span>
+                            </div>
+                            <div class="section-operate">
+                                <i class="el-icon-arrow-down"></i>
+                            </div>
+                        </div>
+                        <div class="task-item-expo-wrapper" :style="{ height: item.flag ? item.special_task.length * 90 + 'px' : 0 }">
+                            <div v-for="task in item.special_task" :key="task.id" class="task-item" @click="goTask(task)">
+                                <div class="task-item-sub">
+                                    <div class="task-item-sub-main">
+                                        <div class="task-item-sub-main-type">
+                                            <i v-if="task.type == 1" class="el-icon-picture-outline-round" title="图文"></i>
+                                            <i v-else-if="task.type == 2" class="el-icon-headset" title="音频"></i>
+                                            <i v-else class="el-icon-video-play" title="视频"></i>
+                                        </div>
+                                        <div class="task-item-sub-main-title">
+                                            <span>{{task.title}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="task-item-sub-type">
+                                        <span v-if="!task.is_free" class="task-free">免费</span>
+                                        <i class="el-icon-lock" v-else-if="task.pay_status"></i>
+                                        <i class="el-icon-unlock" v-else></i>
+                                    </div>
+                                </div>
+                                <div v-if="isLogin && !task.pay_status" class="task-item-progress">
+                                    <div class="task-item-progress_label">学习进度：</div>
+                                    <div class="task-item-progress_inner">
+                                        <div :style="{ width: (task.watch ? task.watch.is_complete ? 100 : task.watch.percentage : 0) + '%' }" class="task-item-progress_bar"></div>
+                                    </div>
+                                    <div class="task-item-progress_value">{{ task.watch ? task.watch.is_complete ? 100 : task.watch.percentage : 0 }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </template>
+                    <el-empty v-if="courseList !== '' && !courseList.length" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="课程目录为空～"></el-empty>
+                    {else /}
+                    <!-- 普通课程目录 -->
+                    <template v-if="courseList.length">
+                    <div v-for="item in courseList" :key="item.id" class="task-item" @click="goTask(item)">
+                        <div class="task-item-sub">
+                            <div class="task-item-sub-main">
+                                <div class="task-item-sub-main-type">
+                                    <i v-if="item.type == 1" class="el-icon-picture-outline-round" title="图文"></i>
+                                    <i v-else-if="item.type == 2" class="el-icon-headset" title="音频"></i>
+                                    <i v-else class="el-icon-video-play" title="视频"></i>
+                                </div>
+                                <div class="task-item-sub-main-title">
+                                    <span>{{ item.title }}</span>
+                                </div>
+                            </div>
+                            <div class="task-item-sub-type">
+                                <span v-if="!isPay && (special.member_pay_type || !is_member) && item.is_free && item.is_try" class="task-free">试看</span>
+                                <span v-if="!item.is_free" class="task-free">免费</span>
+                                <i class="el-icon-lock" v-else-if="item.pay_status"></i>
+                                <i class="el-icon-unlock" v-else></i>
+                            </div>
+                        </div>
+                        <div v-if="isLogin && !item.pay_status" class="task-item-progress">
+                            <div class="task-item-progress_label">学习进度：</div>
+                            <div class="task-item-progress_inner">
+                                <div :style="{ width: (item.watch ? item.watch.is_complete ? 100 : item.watch.percentage : 0) + '%' }" class="task-item-progress_bar"></div>
+                            </div>
+                            <div class="task-item-progress_value">{{ item.watch ? item.watch.is_complete ? 100 : item.watch.percentage : 0 }}%</div>
+                        </div>
+                    </div>
+                    </template>
+                    <el-empty v-if="courseList !== '' && !courseList.length" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="课程目录为空～"></el-empty>
+                    <el-pagination
+                            v-if="courseList.length"
+                            :current-page.sync="coursePage"
+                            :page-size="limit"
+                            :total="courseTotal"
+                            layout="prev, pager, next"
+                            @current-change="currentChange">
+                    </el-pagination>
+                    {/eq}
+                </div>
+                {/neq}
+                {eq name="course_info.type" value="4"}
+                <!--直播回放-->
+                <div class="switch-panel" v-show="currentTab=='replay'">
+                    <template v-if="courseList.length">
+                        <div v-for="item in courseList" :key="item.id" class="task-item" @click="goLive(item)">
+                            <div class="task-item-sub">
+                                <div class="task-item-sub-main">
+                                    <div class="task-item-sub-main-type">
+                                        <i class="el-icon-refresh" title="回放"></i>
+                                    </div>
+                                    <div class="task-item-sub-main-title">
+                                        <span>{{ item.playback_name || special.title }}</span>
+                                    </div>
+                                </div>
+                                <div class="task-item-sub-type">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <el-pagination
+                            v-if="courseList.length"
+                            :current-page.sync="coursePage"
+                            :page-size="limit"
+                            :total="courseTotal"
+                            layout="prev, pager, next"
+                            @current-change="currentChange">
+                    </el-pagination>
+                    <el-empty v-if="courseList !== '' && !courseList.length" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="暂无直播回放～"></el-empty>
+                </div>
+                {/eq}
+                {eq name="course_info.type" value="5"}
+                <!--课程套餐-->
+                <div class="switch-panel" v-show="currentTab=='package'">
+                    <div class="sp-tips">购买本套餐课可获得以下课程：</div>
+                    <div class="sec-wrapper">
+                        <div class="sec-bd">
+                            <div v-for="item in courseItems" :key="item.id">
+                                <section class="course-card-expo-wrapper">
+                                    <a class="kc-course-card" href="javascript:;" @click="goSpecial(item)">
+                                        <div class="kc-course-card-cover">
+                                            <div class="kc-course-card-cover-img" :style="{'background-image': 'url('+replace_url(item.image)+')'}"></div>
+                                        </div>
+                                        <div class="kc-course-card-content">
+                                            <h3 class="kc-course-card-name" :title="item.title">{{item.title}}</h3>
+                                            <div class="kc-course-card-labels">
+                                                <span class="kc-course-card-labels-item" v-for="label in item.label">{{label}}</span>
+                                            </div>
+                                            <div class="kc-course-card-footer normal">
+                                                <div class="kc-coursecard-footer-left">
+                                                    <span class="kc-course-card-student-apply-num">{{item.browse_count}}人报名</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                    <el-pagination
+                            v-if="courseItems.length"
+                            :current-page.sync="cloumnPage"
+                            :page-size="limit"
+                            :total="cloumnTotal"
+                            layout="prev, pager, next"
+                            @current-change="get_cloumn_task">
+                    </el-pagination>
+                </div>
+                {/eq}
+                <!--练习-->
+                <div v-if="testList.length" class="switch-panel" v-show="currentTab=='test'">
+                    <ul class="wy-test-list">
+                        <li v-for="item in testList" :key="item.id" @click="goQuestion(item)">
+                            <div class="wy-test-title">
+                                <i class="el-icon-lock wy-test-payicon" v-if="!isPay"></i>
+                                {{ item.title }}
+                            </div>
+                            <div class="wy-test-info">
+                                <div class="wy-test-meta">
+                                    <div class="wy-test-progress">
+                                        <el-progress :percentage="item.rate"></el-progress>
+                                    </div>
+                                    <div class="wy-test-people">
+                                        {{ item.answer }}人已答题
+                                    </div>
+                                </div>
+                                <el-button size="mini" type="primary" icon="el-icon-edit" round>答题</el-button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <!--考试-->
+                <div v-if="examList.length" class="switch-panel" v-show="currentTab=='exam'">
+                    <div class="recommend wy-exam">
+                        <ul>
+                            <li v-for="(item, index) in examList" :key="item.id" @click="goQuestion(item)">
+                                <section class="course-card-expo-wrapper">
+                                    <a class="kc-course-card" href="javascript:;">
+                                        <div class="kc-course-card-cover" :style="{'background-image': 'url('+replace_url(item.image)+')'}"></div>
+                                        <div class="kc-course-card-content">
+                                            <h3 class="kc-course-card-name" :title="item.title">
+                                                {{ item.title }}
+                                            </h3>
+                                            <div class="kc-course-card-footer">
+                                                <div class="kc-coursecard-footer-left">
+                                                    <span class="kc-course-card-student">共{{ item.item_number }}题</span>
+                                                    <div class="wy-exam-price-box">
+                                                        <span class="kc-course-card-price">
+                                                            <span class="kc-coursecard-price-icon" v-if="item.pay_type==1">
+                                                                <span class="coursedot">¥</span>
+                                                            </span>
+                                                            <span v-if="item.pay_type==1">{{item.money}}</span>
+                                                            <span v-if="item.pay_type==0">免费</span>
+                                                        </span>
+                                                        <span class="kc-vip-price" v-if="item.member_money!=item.money">
+                                                            <span class="kc-vip-label">VIP</span>
+                                                            <span class="kc-vip-num">{{item.member_money == 0 ?'免费' : '¥'+item.member_money }}</span>
+                                                        </span>
+                                                    </div>
+                                                    <el-button class="wy-exam-go" size="mini" type="primary" icon="el-icon-edit" round>开始考试</el-button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </section>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                {eq name="comment_switch" value="1"}
+                <div class="switch-panel" v-show="currentTab=='comment'">
+                    <div class="course-comment">
+                        <div class="submit_evaluate">
+                            <div class="submit_evaluate_title">
+                                <el-rate v-model="rateValue" void-color="#CCCCCC" text-color="#AAAAAA" show-text></el-rate>
+                            </div>
+                            <div class="submit_evaluate_textarea">
+                                <el-form>
+                                    <el-input v-model.trim="comment" class="textarea" rows="5" type="textarea"
+                                              placeholder="课程满足你的期待吗？说说你的想法，分享给想学习得他们把~"></el-input>
+                                </el-form>
+                            </div>
+                            <div class="submit_evaluate_handle">
+                                <el-popover width="312" :title="'图片上传（最多' + uploadLimit + '张）'" placement="bottom-start" trigger="manual" popper-class="upload-popover" v-model="fileList.length">
+                                    <ul v-if="fileList.length">
+                                        <li v-for="(item, index) in fileList" :key="index">
+                                            <img :src="item" :alt="item">
+                                            <div>
+                                                <i class="el-icon-delete" @click="removeUpload(index)"></i>
+                                            </div>
+                                        </li>
+                                        <li v-if="fileList.length < uploadLimit">
+                                            <i class="el-icon-plus avatar-uploader-icon" @click="popoverUpload"></i>
+                                        </li>
+                                    </ul>
+                                    <el-upload slot="reference" ref="upload" action="" :show-file-list="false" :limit="uploadLimit" :http-request="uploadRequest" :on-exceed="uploadExceed">
+                                        <el-button type="text" icon="el-icon-upload">上传图片</el-button>
+                                    </el-upload>
+                                </el-popover>
+                                <el-button type="primary" @click="user_comment_special">发表评价</el-button>
+                            </div>
+                        </div>
+                        <div class="user-recomment">
+                            <div class="user-recomment-total-score">
+                                <span>综合评分：</span>
+                                <span>{{ replyData.score }}</span>
+                                <span>分</span>
+                            </div>
+                            <div v-if="replyList.length" class="user-recomment_list">
+                                <div class="user-recomment_list_item" v-for="(item, index) in replyList" :key="index">
+                                    <div class="user-recomment_list_item_user">
+                                        <div class="user-recomment_list_item_user_nick">
+                                            <div class="user-recomment_list_item_user_nick_avator">
+                                                <img :src="fx_cdn_img(item.avatar)" :alt="item.nickname">
+                                            </div>
+                                            <div class="user-recomment_list_item_user_inner">
+                                                <div class="user-recomment_list_item_user_name">
+                                                    <span>{{item.nickname}}</span>
+                                                </div>
+                                                <div>
+                                                    <span
+                                                            class="el-icon-star-on"
+                                                            v-for="(val, i) in 5"
+                                                            :key="i"
+                                                            :class="{ 'select_evaluate': i < item.star}">
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="user-recomment_list_item_user_time">
+                                            <span>{{item.add_time}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="user-recomment_list_item_value">
+                                        <div class="user-recomment_list_item_value_message">
+                                            <span>{{item.comment}}</span>
+                                        </div>
+                                        <div class="user-recomment_list_item_value_imageList">
+                                            <div class="item_value_imageList_item" v-for="(val, i) in item.pics":key="i">
+                                                <el-image :src="val" :preview-src-list="item.pics"></el-image>
+                                            </div>
+                                        </div>
+                                        <div v-if="item.merchant_reply_content" class="user-recomment_list_item_value_reply">
+                                            <div class="user-recomment_list_item_value_reply_item">
+                                                <div class="value_reply_item_label">
+                                                    <span>官方回复：</span>
+                                                </div>
+                                                <div class="value_reply_item_con">
+                                                    <span>{{item.merchant_reply_content}}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <el-empty v-if="replyList !== '' && !replyList.length" image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="暂无用户评价～"></el-empty>
+                            <el-pagination
+                                    v-if="replyList.length"
+                                    :current-page.sync="replyPage"
+                                    :page-size="limit"
+                                    :total="replyTotal"
+                                    layout="prev, pager, next"
+                                    @current-change="special_reply_list">
+                            </el-pagination>
+                        </div>
+                    </div>
+                </div>
+                {/eq}
+            </div>
+        </div>
+        <aside>
+            {notempty name="lecturer"}
+            <div class="agency-info">
+                <div class="agency-info-inner">
+                    <h4 class="agency-tt">
+                        <div class="tt-cover-url">
+                            <a href="{:url('/view-teacher/'.$lecturer['id'])}" target="_blank" rel="noreferrer">
+                                <img src="{:get_image_src($lecturer['lecturer_head'])}" alt="{$lecturer['lecturer_name']}" width="64" height="64">
+                            </a>
+                        </div>
+                        <div class="tt-cover-right">
+                            <div class="tt-cover-name">
+                                <a class="tt-link" href="{:url('/view-teacher/'.$lecturer['id'])}" title="{$lecturer['lecturer_name']}" target="_blank" rel="noreferrer">{$lecturer['lecturer_name']}</a>
+                            </div>
+                            <div class="teacher-label">
+                                {foreach $lecturer.label as $item_key=>$label}
+                                <div class="teacher-label-item">{$label}</div>
+                                {/foreach}
+                            </div>
+                        </div>
+                    </h4>
+                    {notempty name="$course_info.service_code"}
+                    <button type="button" class="consult-button consult-btn" @click="serverDgShow=true">
+                    <span class="expo-wrapper" tagname="span">
+                        <span class="consult-icon">
+                            <i class="el-icon-service"></i>
+                        </span>
+                        <span class="consult-btn-text consult-title">联系客服</span>
+                        <span class="fuli-explain">定期发放干货资料，优惠福利</span>
+                        <span class="consult-icon-right" style="color:#C0C5CC;font-size:16px"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.636 20.435a1 1 0 0 0 1.414 0l4.95-4.95a4 4 0 0 0 0-5.656l-4.95-4.95a1 1 0 0 0-1.414 1.414l4.95 4.95a2 2 0 0 1 0 2.828l-4.95 4.95a1 1 0 0 0 0 1.414Z" fill="currentColor"></path></svg>
+                        </span>
+                    </span>
+                    </button>
+                    {/notempty}
+                    <div class="agency-summary">
+                        {$lecturer.explain}
+                    </div>
+                </div>
+            </div>
+            {/notempty}
+
+            {if condition="($special.isBatch) AND (!$special.isPay)"}
+            <button class="exchange-btn" @click="exchange">
+                <i class="exchange-icon"><img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/exc-code.png" /></i>
+                <span class="general-btn-txt institution-btn-txt">输入兑换码开始兑换</span>
+            </button>
+            {/if}
+            {neq name="virtual" value="0"}
+            <div class="recommend">
+                <div class="recommend-box">
+                    <div class="recommend-tt">相关资料</div>
+                    <ul class="course-list agency">
+                        {foreach $virtual as $key=>$item}
+                        <li>
+                            <section class="course-card-expo-wrapper">
+                                <a class="kc-course-card" href="{:url('/view-virtual/' . $item.id)}">
+                                    <div class="kc-course-card-cover" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                    <div class="kc-course-card-content">
+                                        <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                        <div class="kc-course-card-footer">
+                                            <div class="kc-coursecard-footer-left">
+                                                <span class="kc-course-card-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    <span>免费</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    <span>加密</span>
+                                                    {/eq}
+                                                </span>
+                                                <span class="kc-course-card-student">{$item.ficti+$item.sales}次下载</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </section>
+                        </li>
+                        {/foreach}
+                    </ul>
+                </div>
+            </div>
+            {/neq}
+            {neq name="recommended_courses" value="0"}
+            <div class="recommend">
+                <div class="recommend-box">
+                    <div class="recommend-tt">推荐课程</div>
+                    <ul class="course-list agency">
+                        {foreach $recommended_courses as $key=>$item}
+                        <li>
+                            <section class="course-card-expo-wrapper">
+                                <a class="kc-course-card"  href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                    <div class="kc-course-card-cover" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                    <div class="kc-course-card-content">
+                                        <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                        <div class="kc-course-card-footer">
+                                            <div class="kc-coursecard-footer-left">
+                                                <span class="kc-course-card-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    免费
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    加密
+                                                    {/eq}
+                                                </span>
+                                                <span class="kc-course-card-student">{$item.browse_count}人最近报名</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </section>
+                        </li>
+                        {/foreach}
+                    </ul>
+                </div>
+            </div>
+            {/neq}
+        </aside>
+    </div>
+</div>
+{notempty name="$course_info.service_code"}
+<el-dialog title="联系客服" :visible.sync="serverDgShow" width="300px">
+    <div class="server-code-box">
+        <img src="{$course_info.service_code}" />
+        <div class="server-tips">扫码联系客服</div>
+    </div>
+</el-dialog>
+{/notempty}
+{else /}
+<el-dialog :visible="true" width="30%">
+    <span slot="title"><i class="el-icon-error"></i> 出错了</span>
+    <span>{$error}</span>
+    <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="closeDg">确 定</el-button>
+    </div>
+</el-dialog>
+{/empty}
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    var special = {:json_encode($course_info)};
+    var detailData = {:json_encode($special)};
+</script>
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/auth',
+        'api/home',
+        'api/special',
+        'api/exam',
+        'scripts/util',
+        'api/live'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, authApi, homeApi, specialApi, examApi, util, liveApi) {
+        {empty name="error"}
+        var comment_switch = {$comment_switch};
+        var link_pay_uid = {$link_pay_uid};
+        var link_pay = {$link_pay};
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            filters: {
+                validityFormat: function (value) {
+                    var result = '';
+                    var days = Math.floor(value/60/60/24);
+                    var hours = Math.floor(value/60/60%24);
+                    var minutes = Math.floor(value/60%60);
+                    if (days) {
+                        result += days + '天';
+                    }
+                    if (hours) {
+                        result += hours + '小时';
+                    }
+                    return result + minutes + '分钟';
+                }
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                currentTab: 'intro',
+                serverDgShow: false,
+                isBatch: false,
+                isPay: {$special.isPay ? 'true' : 'false'},
+                is_member: 0,
+                recordCoujnt: '',
+                special: special,
+                courses: 0,
+                lecturerDetails: {},
+                dataDownload: [],
+                recommendedCourses: [],
+                tipList: [
+                    {
+                        title: '课程详情',
+                        value: 1
+                    },
+                    {
+                        title: '课程目录',
+                        value: 2
+                    },
+                    {
+                        title: '套餐课程',
+                        value: 3
+                    },
+                    {
+                        title: '评价(0条)',
+                        value: 4
+                    }
+                ],
+                tipLeft: 0,
+                selectValue: 1,
+                page: 1,
+                limit: 15,
+                courseList: '',
+                replyData: {},
+                replyList: '',
+                replyFinished: false,
+                rateValue: 5,
+                comment: '',
+                uploadLimit: 6,
+                courseItems: [],
+                cloumnPage: 1,
+                cloumnFinished: false,
+                cloumnTotal: 0,
+                coursePage: 1,
+                courseFinished: false,
+                courseTotal: 0,
+                replyPage: 1,
+                replyTotal: 0,
+                fileList: [],
+                from: '',
+                type: '',
+                recommend_id: '',
+                validity: 0,
+                detailData: detailData,
+                examList: [],
+                testList: [],
+                link_pay_uid: 0,
+            },
+            watch: {
+                'userInfo.phone': function () {
+                    // window.location.reload();
+                }
+            },
+            created: function () {
+                this.id = util.getParmas('id');
+                this.from = util.getParmas('from');
+                this.type = util.getParmas('type');
+                this.recommend_id = util.getParmas('recommend_id');
+                if (link_pay) this.link_pay_uid = link_pay_uid;
+                this.addLearningRecords();
+                if (this.detailData.special.type == 4) {
+                    this.liveInfo = this.detailData.liveInfo;
+                    this.get_live_record_list();
+                } else {
+                    this.numberCourses();
+                    this.get_course_list();
+                    if (this.detailData.special.type == 5) {
+                        this.get_cloumn_task();
+                    }
+                    this.get_exam()
+                    this.get_test()
+                }
+                if (comment_switch) {
+                    this.special_reply_data();
+                    this.special_reply_list();
+                }
+                this.getInspect();
+            },
+            methods: {
+                // 是否可以发放证书
+                getInspect: function () {
+                    var that = this;
+                    specialApi.get_inspect({
+                        special_id: this.special.id,
+                        type: this.special.type
+                    }).then(function (res) {
+                        if (200 == res.code) {
+                            that.$confirm('恭喜您已达到证书发放标准，是否领取?', '证书领取', {
+                                confirmButtonText: '领取',
+                                cancelButtonText: '取消',
+                                type: 'success'
+                            }).then(() => {
+                                that.getCertificate();
+                            }).catch(() => {
+                            });
+                        }
+                    }).catch(function () {
+                    });
+                },
+                // 领取证书
+                getCertificate: function () {
+                    var that = this;
+                    specialApi.get_certificate({
+                        special_id: this.special.id,
+                        type: this.special.type
+                    }).then(function (res) {
+                        that.$message({
+                            type: 'success',
+                            message: '领取成功，请进入个人中心查看'
+                        });
+                    }).catch(function (err) {
+                        that.$message({
+                            type: 'error',
+                            message: err.msg
+                        });
+                    });
+                },
+                // 课程课程节数
+                numberCourses: function () {
+                    specialApi.numberCourses({
+                        id: this.id
+                    }).then(function (res) {
+                        vm.courses = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 讲师信息
+                lecturer_details: function () {
+                    authApi.lecturer_details({
+                        id: this.special.lecturer_id
+                    }).then(function (res) {
+                        vm.lecturerDetails = res.data || {};
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 关联的资料
+                special_data_download: function () {
+                    specialApi.special_data_download({
+                        special_id: this.id
+                    }).then(function (res) {
+                        vm.dataDownload = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 关联的练习
+                get_test: function () {
+                    var vm = this;
+                    examApi.get_course_exam({
+                        special_id: this.id,
+                        type: 1
+                    }).then(function (res) {
+                        var examList = res.data
+                        for (var i = examList.length; i--;) {
+                            examList[i].rate = Math.floor(examList[i].done / examList[i].item_number * 100);
+                        }
+                        vm.testList = examList
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 关联的考试
+                get_exam: function () {
+                    var vm = this;
+                    examApi.get_course_exam({
+                        special_id: this.id,
+                        type: 2
+                    }).then(function (res) {
+                        var examList = res.data
+                        vm.examList = examList
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 去练习、答题
+                goQuestion: function (question) {
+                    var vm = this;
+                    if (question.type == 1) {
+                        homeApi.user_login().then(function () {
+                            window.location = "{:url('/test')}?id=" + question.id;
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                            vm.loginOpen()
+                        });
+                    } else {
+                        window.location = "{:url('/exam')}?id=" + question.id;
+                    }
+                },
+                // 推荐的课程
+                recommended_courses: function () {
+                    specialApi.recommended_courses({
+                        id: this.id
+                    }).then(function (res) {
+                        vm.recommendedCourses = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 课程目录
+                get_course_list: function () {
+                    var vm = this;
+                    specialApi.get_course_list({
+                        page: this.coursePage,
+                        limit: 1000,
+                        special_id: this.id
+                    }).then(function (res) {
+                        if (Array.isArray(res.data)) {
+                            return;
+                        }
+                        var list = res.data.list;
+                        list.forEach(function (item) {
+                            item.flag = false;
+                        });
+                        vm.courseList = list;
+                        vm.courseTotal = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 套餐课程
+                get_cloumn_task: function () {
+                    specialApi.get_cloumn_task({
+                        page: this.cloumnPage,
+                        limit: this.limit,
+                        special_id: this.id
+                    }).then(function (res) {
+                        if (Array.isArray(res.data)) {
+                            return;
+                        }
+                        vm.courseItems = res.data.list;
+                        vm.cloumnTotal = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 回放目录
+                get_live_record_list: function () {
+                    liveApi.get_live_record_list({
+                        special_id: this.id,
+                        page: this.coursePage,
+                        limit: this.limit
+                    }).then(function (res) {
+                        vm.courseList = res.data.data;
+                        vm.courseTotal = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 评价概况
+                special_reply_data: function () {
+                    specialApi.special_reply_data({
+                        special_id: this.id
+                    }).then(function (res) {
+                        vm.replyData = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 评价列表
+                special_reply_list: function () {
+                    specialApi.special_reply_list({
+                        page: this.replyPage,
+                        limit: this.limit,
+                        special_id: this.id
+                    }).then(function (res) {
+                        vm.replyList = res.data.list;
+                        vm.replyTotal = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 发表评价
+                user_comment_special: function () {
+                    if (!(this.isPay || (!this.special.member_pay_type && this.is_member))) {
+                        this.$message('购买学习后既可进行评价');
+                        return;
+                    }
+                    specialApi.user_comment_special(this.id, {
+                        comment: this.comment,
+                        pics: this.fileList,
+                        satisfied_score: this.rateValue
+                    }).then(function (res) {
+                        vm.$message.success(res.msg);
+                        vm.comment = '';
+                        vm.fileList = [];
+                        vm.rateValue = 5;
+                        vm.replyPage = 1;
+                        vm.replyList = [];
+                        vm.replyFinished = false;
+                        vm.special_reply_data();
+                        vm.special_reply_list();
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 点击图片弹窗的上传
+                popoverUpload: function () {
+                    this.$refs.upload.$refs['upload-inner'].$refs.input.click();
+                },
+                // 上传图片
+                uploadRequest: function (elUpload) {
+                    var formData = new FormData();
+                    formData.append('file', elUpload.file)
+                    authApi.upload(formData).then(function (res) {
+                        vm.$message.success(res.msg);
+                        vm.fileList.push(res.data.url);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.$refs.upload.uploadFiles.pop();
+                    });
+                },
+                // 超出上传图片个数限制
+                uploadExceed: function () {
+                    this.$message.warning('最多上传' + this.uploadLimit + '张图');
+                },
+                // 删除上传图片
+                removeUpload: function (index) {
+                    this.fileList.splice(index, 1);
+                    this.$refs.upload.uploadFiles.splice(index, 1);
+                },
+                // 点击立即购买
+                goPayment: function () {
+                    var vm = this;
+                    homeApi.user_login().then(function () {
+                        window.location.assign(vm.router.payment + '?type=1&id=' + vm.id + '&link_pay_uid=' + vm.link_pay_uid);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 点击免费学习、去学习
+                learn: function () {
+                    var vm = this;
+                    homeApi.user_login().then(function () {
+                        if (vm.special.type == 5) {
+                            vm.$message('请在课程目录中选择您将要学习的课程课程');
+                            window.scrollTo({
+                                top: vm.$refs.container.offsetTop / 2,
+                                left: 0,
+                                behavior: 'smooth'
+                            });
+                            vm.selectValue = 2;
+                            if (vm.courseList.length) {
+                                vm.courseList[0].flag = true;
+                            }
+                            return;
+                        }
+                        window.location.assign(vm.router.task_info + '?specialId=' + vm.id + '&task_id=' + vm.courseList[0].id + '&special_title=' + vm.special.title);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 点击进入直播间
+                goLiveRoom: function () {
+                    homeApi.user_login().then(function () {
+                        if (vm.special.pay_type == 2) {
+                            vm.$prompt('请输入直播间密码', '提示', {
+                                confirmButtonText: '确定',
+                                cancelButtonText: '取消',
+                                inputPattern: new RegExp(vm.liveInfo.studio_pwd),
+                                inputErrorMessage: '密码错误'
+                            }).then(function () {
+                                document.cookie = vm.liveInfo.stream_name + 'studio_pwd=' + vm.liveInfo.studio_pwd + ';expires=7200;path=/';
+                                window.location.href = vm.router.live_room + '?stream_name=' + vm.liveInfo.stream_name;
+                            });
+                            return;
+                        }
+                        window.location.assign(vm.router.live_room + '?stream_name=' + vm.liveInfo.stream_name);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 切换详情、目录、套餐、评价
+                selectTip: function (item) {
+                    this.selectValue = item.value
+                },
+                // 点击专栏课程目录
+                selectCourse: function (item) {
+                    item.flag = !item.flag
+                },
+                // 点击收藏
+                collect: function () {
+                    homeApi.user_login().then(function () {
+                        specialApi.collect({
+                            id: vm.id
+                        }).then(function (res) {
+                            vm.special.collect = !vm.special.collect;
+                            vm.$message.success(vm.special.collect ? '收藏成功' : '取消收藏成功');
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 点击课程目录
+                goTask: function (task) {
+                    var vm = this;
+                    homeApi.user_login().then(function () {
+                        if (task.pay_status && !vm.isPay && !task.is_try) {
+                            vm.$message('请先去购买');
+                            return;
+                        }
+                        if (task.is_light) {
+                            window.location.href = vm.router.task_info + '?task_id=0' + '&specialId=' + task.id + '&special_title=' + vm.special.title + '&viewing_time=' + (task.watch && task.watch.viewing_time || 0);
+                            return;
+                        }
+                        specialApi.get_task_link({
+                            task_id: task.id,
+                            special_id: task.special_id
+                        }).then(function () {
+                            specialApi.play_num({
+                                task_id: task.id,
+                                special_id: task.special_id
+                            }).then(function () {
+                                window.location.assign(vm.router.task_info + '?task_id=' + task.id + '&specialId=' + task.special_id + '&special_title=' + vm.special.title + '&viewing_time=' + (task.watch && task.watch.viewing_time || 0));
+                            }).catch(function (err) {
+                                vm.$message.error(err.msg);
+                            });
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 点击讲师
+                goLecturer: function () {
+                    window.location.href = this.router.teacher_detail + '?id=' + this.special.lecturer_id;
+                },
+                // 点击关联的资料
+                goMaterialDetail: function (id) {
+                    window.location.href = this.router.material_details + '?id=' + id;
+                },
+                // 点击推荐课程的更多
+                goSpecialCate: function () {
+                    window.location.href = this.router.special_cate;
+                },
+                // 点击套餐课程、推荐课程
+                goSpecial: function (special) {
+                    window.location.href = (special.is_light ? this.router.single_details : this.router.special_details) + '?id=' + special.id;
+                },
+                // 增加浏览记录
+                addLearningRecords: function () {
+                    specialApi.addLearningRecords({
+                        id: this.id
+                    }).catch(function (err) {
+                        console.error(err.msg);
+                    });
+                },
+                // 点击回放目录
+                goLive: function (live) {
+                    homeApi.user_login().then(function () {
+                        if (vm.special.pay_type == 0) {
+                            document.cookie = vm.liveInfo.stream_name + 'studio_pwd=' + vm.liveInfo.studio_pwd + ';expires=7200;path=/';
+                            window.location.href = vm.router.live_room + '?stream_name=' + vm.liveInfo.stream_name + '&record_id=' + live.RecordId;
+                        } else if (vm.special.pay_type == 1) {
+                            if (vm.isPay) {
+                                document.cookie = vm.liveInfo.stream_name + 'studio_pwd=' + vm.liveInfo.studio_pwd + ';expires=7200;path=/';
+                                window.location.href = vm.router.live_room + '?stream_name=' + vm.liveInfo.stream_name + '&record_id=' + live.RecordId;
+                            } else {
+                                vm.$message('请先购买');
+                            }
+                        } else {
+                            vm.$prompt('请输入直播间密码', '提示', {
+                                confirmButtonText: '确定',
+                                cancelButtonText: '取消',
+                                inputPattern: new RegExp(vm.liveInfo.studio_pwd),
+                                inputErrorMessage: '密码错误'
+                            }).then(function () {
+                                document.cookie = vm.liveInfo.stream_name + 'studio_pwd=' + vm.liveInfo.studio_pwd + ';expires=7200;path=/';
+                                window.location.href = vm.router.live_room + '?stream_name=' + vm.liveInfo.stream_name + '&record_id=' + live.RecordId;
+                            });
+                        }
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                // 兑换码
+                exchange: function () {
+                    homeApi.user_login().then(function () {
+                        vm.$prompt('', '课程兑换', {
+                            customClass: 'exchange-msgbox',
+                            showCancelButton: false,
+                            confirmButtonText: '立即兑换',
+                            inputPlaceholder: '请输入兑换码',
+                            inputPattern: /^\d{1,}$/,
+                            inputErrorMessage: '请输入兑换码',
+                            center: true
+                        }).then(function (data) {
+                            specialApi.exchange_submit({
+                                special_id: vm.id,
+                                code: data.value
+                            }).then(function () {
+                                vm.$message.success('兑换成功！');
+                                window.location.reload();
+                            }).catch(function (err) {
+                                vm.$message.error(err.msg);
+                            });
+                        }).catch(function () {});
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                },
+                currentChange: function () {
+                    if (this.special.type == 4) {
+                        this.get_live_record_list();
+                    } else {
+                        this.get_course_list();
+                    }
+                }
+            }
+        });
+        {else /}
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            mounted: function () {
+
+            },
+            methods: {
+                closeDg: function () {
+                    window.history.go(-1)
+                }
+            }
+        })
+        {/empty}
+    });
+</script>
+{/block}

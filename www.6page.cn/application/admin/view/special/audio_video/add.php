@@ -1,0 +1,942 @@
+{extend name="public/container"}
+{block name='head_top'}
+<style>
+    .layui-table {
+        width: 100%!important;
+    }
+
+    .layui-form-item .special-label {
+        width: 50px;
+        float: left;
+        height: 30px;
+        line-height: 38px;
+        margin-left: 10px;
+        margin-top: 5px;
+        border-radius: 5px;
+        background-color: #10952a;
+        text-align: center;
+    }
+
+    .layui-form-item .special-label i {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        color: #fff;
+    }
+
+    .layui-form-item .label-box {
+        border: 1px solid;
+        border-radius: 10px;
+        position: relative;
+        padding: 10px;
+        height: 30px;
+        color: #fff;
+        background-color: #393D49;
+        text-align: center;
+        cursor: pointer;
+        display: inline-block;
+        line-height: 10px;
+    }
+
+    .layui-form-item .label-box p {
+        line-height: inherit;
+    }
+
+    .edui-default .edui-for-image .edui-icon {
+        background-position: -380px 0px;
+    }
+
+    .layui-tab-title .layui-this:after {
+        border-bottom-color: #fff!important;
+    }
+    .upload-image-box .mask p{width: 50px;}
+</style>
+<script type="text/javascript" charset="utf-8" src="{__ADMIN_PATH}plug/ueditor/third-party/zeroclipboard/ZeroClipboard.js"></script>
+<script type="text/javascript" charset="utf-8" src="{__ADMIN_PATH}plug/ueditor/ueditor.config.js?456"></script>
+<script type="text/javascript" charset="utf-8" src="{__ADMIN_PATH}plug/ueditor/ueditor.all.min.js"></script>
+{/block}
+{block name="content"}
+<div v-cloak id="app" class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-body">
+            <form class="layui-form" action="">
+                <div class="layui-form-item top-save">
+                    <div class="layui-input-block">
+                        <button class="layui-btn layui-btn-normal" type="button" lay-filter="formDemo" @click="save">{$id ?
+                            '确认修改':'立即提交'}
+                        </button>
+                        <button class="layui-btn layui-btn-primary clone" type="button" @click="clone_form">取消
+                        </button>
+                    </div>
+                </div>
+                <div class="layui-tab" lay-filter="tab">
+                    <ul class="layui-tab-title">
+                        <li class="layui-this">基本设置</li>
+                        <li>课节选择</li>
+                        <li>价格设置</li>
+                    </ul>
+                    <div class="layui-tab-content">
+                        <div class="layui-tab-item layui-show">
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程名称：</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="title" required v-model.trim="formData.title" autocomplete="off" placeholder="请输入课程名称" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程分类：</label>
+                                <div class="layui-input-block">
+                                    <select name="subject_id" v-model="formData.subject_id" lay-search="" lay-filter="subject_id" lay-verify="required">
+                                        <option value="0">请选分类</option>
+                                        <option  v-for="item in subject_list" :value="item.id" :disabled="item.grade_id==0 ? true : false">{{item.html}}{{item.name}}</option>
+                                    </select>
+                                </div>
+                                <div class="layui-form-mid layui-word-aux">一级分类不可选中，需二级分类</div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">讲师选择：</label>
+                                <div class="layui-input-block">
+                                    <select name="subject_id" v-model="formData.lecturer_id" lay-search="" lay-filter="lecturer_id">
+                                            <option value="0">请选讲师</option>
+                                            <option  :value="item.id"  v-for="item in lecturer_list">{{item.lecturer_name}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程简介：</label>
+                                <div class="layui-input-block">
+                            <textarea placeholder="请输入课程简介" v-model="formData.abstract" class="layui-textarea"></textarea>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">课程排序：</label>
+                                <div class="layui-input-inline">
+                                    <input type="number" name="sort" v-model="formData.sort" autocomplete="off" min="0" class="layui-input" v-sort>
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程标签：</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" v-model="label" name="price_min" placeholder="最多6个字" autocomplete="off" maxlength="6" class="layui-input">
+                                </div>
+                                <div class="layui-input-inline" style="width: auto;">
+                                    <button type="button" class="layui-btn layui-btn-normal" @click="addLabrl" >
+                                        <i class="layui-icon">&#xe654;</i>
+                                    </button>
+                                </div>
+                                <div class="layui-form-mid layui-word-aux">输入标签名称后点击”+“号按钮添加；最多写入6个字；点击标签即可删除</div>
+                            </div>
+                            <div v-if="formData.label.length" class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button v-for="(item,index) in formData.label" :key="index" type="button" class="layui-btn layui-btn-normal layui-btn-sm" @click="delLabel(index)">{{item}}</button>
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程封面：（800*450）</label>
+                                <div class="layui-input-block">
+                                    <div class="upload-image-box" v-if="formData.image" @mouseenter="mask.image = true" @mouseleave="mask.image = false">
+                                        <img :src="formData.image" alt="">
+                                        <div class="mask" v-show="mask.image" style="display: block">
+                                            <p>
+                                                <i class="fa fa-eye" @click="look(formData.image)"></i>
+                                                <i class="fa fa-trash-o" @click="delect('image')"></i>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="upload-image" v-show="!formData.image" @click="upload('image')">
+                                        <div class="fiexd"><i class="fa fa-plus"></i></div>
+                                        <p>选择图片</p>
+                                    </div>
+                                </div>
+                            </div>
+<!--                            <div class="layui-form-item required">-->
+<!--                                <label class="layui-form-label">课程Banner：（800*450）</label>-->
+<!--                                <div class="layui-input-block">-->
+<!--                                    <div class="upload-image-box" v-if="formData.banner.length" v-for="(item,index) in formData.banner" @mouseenter="enter(item)" @mouseleave="leave(item)">-->
+<!--                                        <img :src="fx_cdn_img(item.pic)" alt="">-->
+<!--                                        <div class="mask" v-show="item.is_show" style="display: block">-->
+<!--                                            <p>-->
+<!--                                                <i class="fa fa-eye" @click="look(item.pic)"></i>-->
+<!--                                                <i class="fa fa-trash-o" @click="delect('banner',index)"></i>-->
+<!--                                            </p>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                    <div class="upload-image" v-show="formData.banner.length <= 3" @click="upload('banner',5)">-->
+<!--                                        <div class="fiexd"><i class="fa fa-plus"></i></div>-->
+<!--                                        <p>选择图片</p>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">推广海报：（600*740）</label>
+                                <div class="layui-input-block">
+                                    <div class="upload-image-box" v-if="formData.poster_image" @mouseenter="mask.poster_image = true" @mouseleave="mask.poster_image = false">
+                                        <img :src="formData.poster_image" alt="">
+                                        <div class="mask" v-show="mask.poster_image" style="display: block">
+                                            <p><i class="fa fa-eye" @click="look(formData.poster_image)"></i>
+                                                <i class="fa fa-trash-o" @click="delect('poster_image')"></i></p>
+                                        </div>
+                                    </div>
+                                    <div class="upload-image" v-show="!formData.poster_image" @click="upload('poster_image')">
+                                        <div class="fiexd"><i class="fa fa-plus"></i></div>
+                                        <p>选择图片</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">客服二维码：（200*200）</label>
+                                <div class="layui-input-block">
+                                    <div class="upload-image-box" v-if="formData.service_code" @mouseenter="mask.service_code = true" @mouseleave="mask.service_code = false">
+                                        <img :src="formData.service_code" alt="">
+                                        <div class="mask" v-show="mask.service_code" style="display: block">
+                                            <p><i class="fa fa-eye" @click="look(formData.service_code)"></i>
+                                                <i class="fa fa-trash-o" @click="delect('service_code')"></i></p>
+                                        </div>
+                                    </div>
+                                    <div class="upload-image" v-show="!formData.service_code" @click="upload('service_code')">
+                                        <div class="fiexd"><i class="fa fa-plus"></i></div>
+                                        <p>选择图片</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">插入{{type_title}}：</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="title" v-model="link" style="width:300px;display:inline-block;margin-right: 10px;" autocomplete="off" placeholder="请输入视频链接" class="layui-input">
+                                    <button type="button" class="layui-btn layui-btn-sm layui-btn-normal" @click="uploadVideo()">{{confirm_title}}
+                                    </button>
+                                    <button type="button" class="layui-btn layui-btn-sm layui-btn-normal" id="ossupload">{{but_title}}
+                                    </button>
+                                    <div class="layui-form-mid layui-word-aux" style="float: none;display: inline-block;">输入链接将视为添加视频直接添加,请确保视频链接的正确性</div>
+                                </div>
+                                <input type="file" name="video" v-show="" ref="video">
+                                <div class="layui-input-block" style="width: 50%;margin-top: 20px" v-show="is_video">
+                                    <div class="layui-progress" style="margin-bottom: 10px">
+                                        <div class="layui-progress-bar layui-bg-blue" :style="'width:'+videoWidth+'%'"></div>
+                                    </div>
+                                    <button type="button" class="layui-btn layui-btn-sm layui-btn-danger" @click="cancelUpload">取消
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">课程详情：</label>
+                                <div class="layui-input-block">
+                                 <textarea id="editor">{{formData.content}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-tab-item">
+                            <div class="layui-form-item required">
+                                <label class="layui-form-label">选择课节：</label>
+                                <div class="layui-input-block">
+                                    <input type="hidden" id="check_source_tmp" name="check_source_tmp"/>
+                                    <button type="button" class="layui-btn layui-btn-normal" @click='search_task'>
+                                        选择课节
+                                    </button>
+                                    <div class="layui-form-mid layui-word-aux" style="float: none;display: inline-block;">如果课节列表中没有你要的课节，请：<a @click='add_source' style="color: #0093dd;">前往添加课节</a></div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">课节展示：</label>
+                                <div class="layui-input-block">
+                                    <input type="hidden" id="check_source_sure" name="check_source_sure"/>
+                                    <table class="layui-hide" id="showSourceList" lay-filter="showSourceList"></table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-tab-item">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">仅会员可见：</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="is_mer_visible" lay-filter="is_mer_visible" v-model="formData.is_mer_visible" value="1" title="是">
+                                    <input type="radio" name="is_mer_visible" lay-filter="is_mer_visible" v-model="formData.is_mer_visible" value="0" title="否">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">有效期：</label>
+                                <div class="layui-input-inline">
+                                    <input type="number" name="validity" lay-verify="number" v-model="formData.validity" autocomplete="off" class="layui-input" min="0" max="99999">
+                                </div>
+                                <div class="layui-form-mid">天</div>
+                                <div class="layui-form-mid layui-word-aux">有效期为用户购买后可以观看时间，0为时间不限；</div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">付费方式：</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="pay_type" lay-filter="pay_type" v-model="formData.pay_type" value="1" title="付费">
+                                    <input type="radio" name="pay_type" lay-filter="pay_type" v-model="formData.pay_type" value="0" title="免费">
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.pay_type == 1">
+                                <label class="layui-form-label">购买金额：</label>
+                                <div class="layui-input-inline">
+                                    <input type="number" name="money" lay-verify="number" v-model="formData.money" autocomplete="off" class="layui-input">
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label" style="padding: 9px 0;">会员付费方式：</label>
+                                    <div class="layui-input-block">
+                                        <input type="radio" name="member_pay_type" lay-filter="member_pay_type" v-model="formData.member_pay_type" value="1" title="付费">
+                                        <input type="radio" name="member_pay_type" lay-filter="member_pay_type" v-model="formData.member_pay_type" value="0" title="免费">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item" v-show="formData.member_pay_type == 1">
+                                    <label class="layui-form-label" style="padding: 9px 0;">会员购买金额：</label>
+                                    <div class="layui-input-inline">
+                                        <input type="number" name="member_money" lay-verify="number" v-model="formData.member_money" autocomplete="off" class="layui-input" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">单独分销：</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="is_alone" lay-filter="is_alone" v-model="formData.is_alone" :disabled="formData.pay_type == 0" value="1" title="开启">
+                                    <input type="radio" name="is_alone" lay-filter="is_alone" v-model="formData.is_alone" :disabled="formData.pay_type == 0" value="0" title="关闭">
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_alone == 1">
+                                <label class="layui-form-label">一级返佣比例[5%=5]：</label>
+                                <div class="layui-input-block">
+                                    <input style="width: 300px" type="number" name="brokerage_ratio" lay-verify="number" v-model="formData.brokerage_ratio" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_alone == 1">
+                                <label class="layui-form-label">二级返佣比例[5%=5]：</label>
+                                <div class="layui-input-block">
+                                    <input style="width: 300px" type="number" name="brokerage_two" lay-verify="number" v-model="formData.brokerage_two" autocomplete="off" class="layui-input" min="0">
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.pay_type == 1">
+                                <label class="layui-form-label">拼团状态：</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="is_pink" lay-filter="is_pink" v-model="formData.is_pink" value="0" title="关闭" checked="">
+                                    <input type="radio" name="is_pink" lay-filter="is_pink" v-model="formData.is_pink" value="1" title="开启">
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item" v-show="formData.is_pink">
+                                <div class="layui-inline">
+                                    <label class="layui-form-label">拼团金额：</label>
+                                    <div class="layui-input-inline">
+                                        <input type="number" name="pink_money" v-model="formData.pink_money" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-inline">
+                                    <label class="layui-form-label">拼团人数：</label>
+                                    <div class="layui-input-inline">
+                                        <input type="number" name="pink_number" v-model="formData.pink_number" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_pink">
+                                <div class="layui-inline">
+                                    <label class="layui-form-label">开始时间：</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" name="pink_strar_time" v-model="formData.pink_strar_time" id="start_time" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-inline">
+                                    <label class="layui-form-label">结束时间：</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" name="pink_end_time" v-model="formData.pink_end_time" id="end_time" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_pink">
+                                <label class="layui-form-label">拼团时间：</label>
+                                <div class="layui-input-inline">
+                                    <input type="number" v-model="formData.pink_time" autocomplete="off" class="layui-input">
+                                </div>
+                                <div class="layui-form-mid">小时</div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_pink">
+                                <label class="layui-form-label">模拟成团：</label>
+                                <div class="layui-input-block">
+                                    <input type="radio" name="is_fake_pink" lay-filter="is_fake_pink" v-model="formData.is_fake_pink" value="1" title="开启" checked="">
+                                    <input type="radio" name="is_fake_pink" lay-filter="is_fake_pink" v-model="formData.is_fake_pink" value="0" title="关闭">
+                                </div>
+                            </div>
+                            <div class="layui-form-item" v-show="formData.is_fake_pink && formData.is_pink">
+                                <label class="layui-form-label">补齐比例：</label>
+                                <div class="layui-input-inline">
+                                    <input type="number" v-model="formData.fake_pink_number" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <button class="layui-btn layui-btn-normal" type="button" lay-filter="formDemo" @click="save">{$id ?
+                            '确认修改':'立即提交'}
+                        </button>
+                        <button class="layui-btn layui-btn-primary clone" type="button" @click="clone_form">取消
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="{__ADMIN_PATH}js/layuiList.js"></script>
+{/block}
+{block name='script'}
+<script>
+    var id = {$id}, special =<?=isset($special) ? $special : "{}"?>, special_type ="{$special_type}";
+    require(['vue','helper','zh-cn','request','plupload','aliyun-oss','OssUpload'], function (Vue,$h) {
+        new Vue({
+            el: "#app",
+            directives: {
+                sort: {
+                    bind: function (el, binding, vnode) {
+                        var vm = vnode.context;
+                        el.addEventListener('change', function () {
+                            if (!this.value || this.value < 0) {
+                                vm.formData.sort = 0;
+                            } else if (this.value > 9999) {
+                                vm.formData.sort = 9999;
+                            } else {
+                                vm.formData.sort = parseInt(this.value);
+                            }
+                        });
+                    }
+                }
+            },
+            data: {
+                subject_list: [],
+                source_tmp_list:[],//用于子页父业选中课节传值的临时变量
+                source_list: [],
+                lecturer_list: [],
+                formData: {
+                    subjectIds:'',
+                    phrase: special.phrase || '',
+                    label: special.label || [],
+                    abstract: special.abstract || '',
+                    title: special.title || '',
+                    subject_id: special.subject_id || 0,
+                    lecturer_id: special.lecturer_id || 0,
+                    task_id: 0,
+                    image: special.image || '',
+                    banner: special.banner || [],
+                    poster_image: special.poster_image || '',
+                    service_code: special.service_code || '',
+                    money: special.money || 0.00,
+                    pink_money: special.pink_money || 0.00,
+                    pink_number: special.pink_number || 0,
+                    pink_strar_time: special.pink_strar_time || '',
+                    pink_end_time: special.pink_end_time || '',
+                    fake_pink_number: special.fake_pink_number || 0,
+                    sort: special.sort || 0,
+                    is_mer_visible: special.is_mer_visible || 0,
+                    is_pink: special.is_pink || 0,
+                    is_fake_pink: special.is_fake_pink || 1,
+                    fake_sales: special.fake_sales || 0,
+                    validity: special.validity || 0,
+                    browse_count: special.browse_count || 0,
+                    pink_time: special.pink_time || 0,
+                    content: special.profile ? (special.profile.content || '') : '',
+                    pay_type: special.pay_type == 1 ? 1 : 0,
+                    check_source_sure: [],
+                    check_store_sure: [],
+                    member_pay_type: special.member_pay_type == 1 ? 1 : 0,
+                    member_money: special.member_money || 0.00,
+                    link:special.link || '',
+                    is_alone:special.pay_type == 1 ? (special.is_alone == 1 ? 1 : 0) : 0,
+                    brokerage_ratio:special.pay_type == 1 ? (special.brokerage_ratio || 0) : 0,
+                    brokerage_two:special.pay_type == 1 ? (special.brokerage_two || 0) : 0
+                },
+                but_title:special_type==2?'上传音频':'上传视频',
+                type_title: special_type==2?'音频':'视频',
+                confirm_title: special_type==2?'确认音频':'确认视频',
+                link: '',
+                label: '',
+                host: ossUpload.host + '/',
+                mask: {
+                    poster_image: false,
+                    image: false,
+                    service_code: false,
+                },
+                ue: null,
+                is_video: false,
+                //上传类型
+                mime_types: {
+                    Image: "jpg,gif,png,JPG,GIF,PNG",
+                    Video: "mp4,MP4",
+                    Audio: "mp3,MP3",
+                },
+                videoWidth: 0,
+                uploader: null,
+                searchTask:false
+            },
+            watch:{
+                'formData.validity':function (v) {
+                    if (v.indexOf('.')!=-1) {
+                       return layList.msg('不能输入小数');
+                    }
+                    if(v<0) return layList.msg('不能小于0');
+                    if(v>99999) return layList.msg('不能大于99999');
+                }
+            },
+            methods: {
+                //取消
+                cancelUpload: function () {
+                    this.uploader.stop();
+                    this.is_video = false;
+                    this.videoWidth = 0;
+                },
+                //删除图片
+                delect: function (key, index) {
+                    var that = this;
+                    if (index != undefined) {
+                        that.formData[key].splice(index, 1);
+                        that.$set(that.formData, key, that.formData[key]);
+                    } else {
+                        that.$set(that.formData, key, '');
+                    }
+                },
+                //查看图片
+                look: function (pic) {
+                    parent.$eb.openImage(pic);
+                },
+                //鼠标移入事件
+                enter: function (item) {
+                    if (item) {
+                        item.is_show = true;
+                    } else {
+                        this.mask = true;
+                    }
+                },
+                //鼠标移出事件
+                leave: function (item) {
+                    if (item) {
+                        item.is_show = false;
+                    } else {
+                        this.mask = false;
+                    }
+                },
+                changeIMG: function (key, value, multiple) {
+                    if (multiple) {
+                        var that = this;
+                        value.map(function (v) {
+                            that.formData[key].push({pic: v, is_show: false});
+                        });
+                        this.$set(this.formData, key, this.formData[key]);
+                    } else {
+                        this.$set(this.formData, key, value);
+                    }
+                },
+                uploadVideo: function () {
+                    if (this.link.substr(0, 7).toLowerCase() == "http://" || this.link.substr(0, 8).toLowerCase() == "https://") {
+                        this.setContent(this.link);
+                    } else {
+                        layList.msg('请输入正确的视频链接');
+                    }
+                },
+                setContent: function (link) {
+                    this.formData.link = link;
+                    this.ue.setContent('<div><video style="width: 100%" src="'+link+'" class="video-ue" controls="controls"><source src="'+link+'"></source></video></div><span style="color:white">.</span>',true);
+                },
+                //上传图片
+                upload: function (key, count) {
+                    ossUpload.createFrame('请选择图片', {fodder: key, max_count: count === undefined ? 0 : count},{w:800,h:550});
+                },
+                //获取分类
+                get_subject_list: function () {
+                    var that = this;
+                    layList.baseGet(layList.U({a: 'get_subject_list'}), function (res) {
+                        that.$set(that, 'subject_list', res.data);
+                        that.$nextTick(function () {
+                            layList.form.render('select');
+                        })
+                    });
+                },
+                //获取讲师
+                get_lecturer_list: function () {
+                    var that = this;
+                    layList.baseGet(layList.U({a: 'get_lecturer_list'}), function (res) {
+                        that.$set(that, 'lecturer_list', res.data);
+                        that.$nextTick(function () {
+                            layList.form.render('select');
+                        })
+                    });
+                },
+                delLabel: function (index) {
+                    this.formData.label.splice(index, 1);
+                    this.$set(this.formData, 'label', this.formData.label);
+                },
+                addLabrl: function () {
+                    if (this.label) {
+                        if (this.label.length > 6) return layList.msg('您输入的标签字数太长');
+                        var length = this.formData.label.length;
+                        if (length >= 2) return layList.msg('标签最多添加2个');
+                        for (var i = 0; i < length; i++) {
+                            if (this.formData.label[i] == this.label) return layList.msg('请勿重复添加');
+                        }
+                        this.formData.label.push(this.label);
+                        this.$set(this.formData, 'label', this.formData.label);
+                        this.label = '';
+                    }
+                },
+                save: function () {
+                    var that = this;
+                    that.formData.content = that.ue.getContent();
+                    that.$nextTick(function () {
+                    if (!that.formData.title) return layList.msg('请输入课程标题');
+                    if (!that.formData.subject_id) return layList.msg('请选择分类');
+                    if (!that.formData.abstract) return layList.msg('请输入课程简介');
+                    if (!that.formData.label.length) return layList.msg('请输入标签');
+                    if (!that.formData.image) return layList.msg('请上传课程封面');
+                    // if (!that.formData.banner.length) return layList.msg('请上传banner图,最少1张');
+                    if (!that.formData.poster_image) return layList.msg('请上传推广海报');
+                    // if (!that.formData.service_code) return layList.msg('请上传客服二维码');
+                    if (!that.formData.content) return layList.msg('请编辑内容在进行保存');
+                    if(Object.keys(that.formData.check_source_sure).length == 0) return layList.msg('请选择课节');
+                    if (that.formData.validity < 0) return layList.msg('课程有效期不能小于0');
+                    if (that.formData.validity > 99999) return layList.msg('课程有效期不能大于99999');
+                    if ((that.formData.validity+'').indexOf('.')!=-1) return layList.msg('课程有效期不能为小数');
+                    
+                    if (that.formData.is_pink) {
+                        if (!that.formData.pink_money) return layList.msg('请填写拼团金额');
+                        if (!that.formData.pink_number) return layList.msg('请填写拼团人数');
+                        if (!that.formData.pink_strar_time) return layList.msg('请选择拼团开始时间');
+                        if (!that.formData.pink_end_time) return layList.msg('请选择拼团结束时间');
+                        if (!that.formData.pink_time) return layList.msg('请填写拼团时间');
+                        if (that.formData.is_fake_pink && !that.formData.fake_pink_number) return layList.msg('请填写补齐比例');
+                    }
+                    that.formData.subjectIds=JSON.stringify(that.formData.check_source_sure);
+
+                    if (that.formData.pay_type == 1) {
+                        if (!that.formData.money || that.formData.money == 0.00) return layList.msg('请填写购买金额');
+                    }
+
+                    if (that.formData.member_pay_type == 1) {
+                        if (!that.formData.member_money || that.formData.member_money == 0.00) return layList.msg('请填写会员购买金额');
+                    }
+                    if (that.formData.is_alone == 1) {
+                        if (!that.formData.brokerage_ratio || !that.formData.brokerage_two) return layList.msg('请填写推广人返佣比例');
+                    }
+                    var data={};
+                    for (var key in that.formData) {
+                        if (key !== 'check_source_sure') {
+                            data[key] = that.formData[key]
+                        }
+                    }
+                    layList.loadFFF();
+                    layList.basePost(layList.U({
+                        a: 'save_special',
+                        q: {id: id, special_type: special_type}
+                    }), data, function (res) {
+                        layList.loadClear();
+                        if (parseInt(id) == 0) {
+                            layList.layer.confirm('添加成功,您要继续添加课程吗?', {
+                                btn: ['继续添加', '立即提交'] //按钮
+                            }, function (index) {
+                                layList.layer.close(index);
+                            }, function () {
+                                parent.layer.closeAll();
+                            });
+                        } else {
+                            layList.msg('修改成功', function () {
+                                parent.layer.closeAll();
+                                window.location.href = layList.U({
+                                    a: 'index',
+                                    p: {type: 1, special_type:special_type}
+                                });
+                            })
+                        }
+                    }, function (res) {
+                        layList.msg(res.msg);
+                        layList.loadClear();
+                    });
+                    })
+                },
+                clone_form: function () {
+                    if (parseInt(id) == 0) {
+                        var that = this;
+                        if (that.formData.image.pic) return layList.msg('请先删除上传的图片在尝试取消');
+                        if (that.formData.poster_image.pic) return layList.msg('请先删除上传的图片在尝试取消');
+                        if (that.formData.banner.length) return layList.msg('请先删除上传的图片在尝试取消');
+                        if (that.formData.service_code.pic) return layList.msg('请先删除上传的图片在尝试取消');
+                        parent.layer.closeAll();
+                    }
+                    parent.layer.closeAll();
+                },
+                //课节
+                search_task:function () {
+                    var that=this;
+                    var url="{:Url('admin/special.special_type/searchs_task')}?special_id="+id+"&special_type="+special_type;
+                    var title='选择课节';
+                    that.searchTask=true;
+                    layer.open({
+                        type: 2 //Page层类型
+                        ,area: ['80%', '90%']
+                        ,title: title
+                        ,shade: 0.6 //遮罩透明度
+                        ,maxmin: true //允许全屏最小化
+                        ,anim: 1 //0-6的动画形式，-1不开启
+                        ,content: url,
+                        btn: '确定',
+                        btnAlign: 'c', //按钮居中
+                        closeBtn:1,
+                        yes: function(){
+                            layer.closeAll();
+                            var source_tmp = $("#check_source_tmp").val();
+                            that.source_tmp_list = JSON.parse(source_tmp);
+                            var array=that.formData.check_source_sure;
+                            that.formData.check_source_sure=array.concat(JSON.parse(source_tmp));
+                            that.formData.check_source_sure=that.duplicate_removal(that.formData.check_source_sure);
+                            that.show_source_list();
+                        }
+                    });
+                },
+                duplicate_removal:function(array)
+                {
+                    var new_arr=[];
+                    var check_source_sure=[];
+                    for(var i=0;i<array.length;i++) {
+                        var items=array[i];
+                        var id=array[i].id;
+                        if($.inArray(id,new_arr)==-1) {
+                            new_arr.push(id);
+                            check_source_sure.push(items);
+                        }
+                    }
+                    return check_source_sure;
+                },
+                add_source:function(){
+                    var that=this;
+                    var url="{:Url('admin/special.special_type/addSources')}";
+                    var title='添加课节';
+                    layer.open({
+                        type: 2 //Page层类型
+                        ,area: ['80%', '90%']
+                        ,title: title
+                        ,shade: 0.6 //遮罩透明度
+                        ,maxmin: true //允许全屏最小化
+                        ,anim: 1 //0-6的动画形式，-1不开启
+                        ,content: url
+                        ,end:function () {
+                            layer.closeAll();
+                        }
+                    });
+                },
+                show_source_list:function () {
+                    var that = this;
+                    var table = layui.table,form = layui.form;
+                    table.render({
+                        elem: '#showSourceList'
+                        ,cols: [[
+                            {field: 'id', title: '编号', align: 'center',width:60},
+                            {field: 'title', title: '课节标题',align: 'center'},
+                            {field: 'image', title: '封面',templet:'<div><img src="{{ d.image }}" style="width: 100%;"></div>',align: 'center'},
+                            {field: 'sort', title: '排序',edit:'sort',align: 'center'},
+                            {field: 'pay_status', title: '收费状态',align: 'center',templet:function(d){
+                                    var is_checked = d.pay_status == 0 ? "checked" : "";
+                                    return "<input type='checkbox' name='pay_status' lay-skin='switch' value='"+d.id+"' lay-filter='pay_status' lay-text='免费|收费' "+is_checked+">";
+                                }},
+                            {field: 'right', title: '操作',align: 'center',templet:function(d){
+                                    return '<div><a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i> 移除</a></div>';
+                                }}
+                        ]]
+                        ,data: that.formData.check_source_sure
+                        ,page: {
+                           theme: '#10952a'
+                       }
+                        ,id: 'table'
+                    });
+                    table.on('tool(showSourceList)', function(obj){
+                        var data = obj.data;
+                        if(obj.event === 'del'){
+                            if (that.formData.check_source_sure) {
+                                for(var i=0;i<that.formData.check_source_sure.length;i++){
+                                    if(that.formData.check_source_sure[i].id==data.id){
+                                        that.formData.check_source_sure.splice(i,1);
+                                    }
+                                }
+                                that.formData.check_source_sure=that.formData.check_source_sure;
+                                that.show_source_list();
+                            }
+                        }
+                    });
+                    table.on('edit(showSourceList)', function(obj){
+                        var id=obj.data.id,values=obj.value;
+                        switch (obj.field) {
+                            case 'sort':
+                                if (that.formData.check_source_sure) {
+                                    $.each(that.formData.check_source_sure, function(index, value){
+                                        if(value.id == id){
+                                            that.formData.check_source_sure[index].sort = values;
+                                        }
+                                    })
+                                }
+                                break;
+                        }
+                    });
+                    //监听课节是否免费操作
+                    form.on('switch(pay_status)', function(obj){
+                        if (that.formData.check_source_sure) {
+                            $.each(that.formData.check_source_sure, function(index, value){
+                                if(value.id == obj.value){
+                                    that.formData.check_source_sure[index].pay_status = obj.elem.checked == true ? 0 : 1;
+                                }
+                            })
+                        }
+                    });
+                    //监听课节是否删除
+                    form.on('switch(delect)', function(obj){
+                        if (that.formData.check_source_sure) {
+                            for(var i=0;i<that.formData.check_source_sure.length;i++){
+                                if(that.formData.check_source_sure[i].id==obj.value){
+                                    that.formData.check_source_sure.splice(i,1);
+                                }
+                            }
+                            that.formData.check_source_sure=that.formData.check_source_sure;
+                            that.show_source_list();
+                        }
+                    });
+                },
+                del:function (e) {
+                    console.log(e);
+                },
+                get_check_source_sure:function () {
+                    var that = this;
+                    layList.baseGet(layList.U({a: 'get_check_source_sure',q: {id: id, special_type:special_type}}), function (res) {
+                        that.formData.check_source_sure=res.data.sourceCheckList;
+                        that.formData.check_store_sure=res.data.storeCheckList;
+                        that.show_source_list();
+                    });
+                }
+            },
+            mounted: function () {
+                var that = this;
+                window.changeIMG = that.changeIMG;
+                layList.date({
+                    elem: '#start_time',
+                    theme: '#393D49',
+                    type: 'datetime',
+                    done: function (value) {
+                        that.formData.pink_strar_time = value;
+                    }
+                });
+                layList.date({
+                    elem: '#end_time',
+                    theme: '#393D49',
+                    type: 'datetime',
+                    done: function (value) {
+                        that.formData.pink_end_time = value;
+                    }
+                });
+                //选择图片
+                function changeIMG(index, pic) {
+                    $(".image_img").css('background-image', "url(" + pic + ")");
+                    $(".active").css('background-image', "url(" + pic + ")");
+                    $('#image_input').val(pic);
+                }
+
+                //选择图片插入到编辑器中
+                window.insertEditor = function (list) {
+                    list = handle_editor_img(list);
+                    that.ue.execCommand('insertimage', list);
+                };
+                this.$nextTick(function () {
+                    layList.form.render();
+                    layui.element.on('tab(tab)', function () {
+                        layui.table.resize('table');
+                    });
+                    //实例化编辑器
+                    UE.registerUI('选择图片', function (editor, uiName) {
+                        var btn = new UE.ui.Button({
+                            name: uiName,
+                            title: uiName,
+                            cssRules: 'background-position: -380px 0;',
+                            onclick: function() {
+                                ossUpload.createFrame(uiName, { fodder: editor.key }, { w: 800, h: 550 });
+                            }
+                        });
+                        return btn;
+                    });
+                    that.ue = UE.getEditor('editor');
+                });
+                //获取科目
+                that.get_subject_list();
+                //获取讲师
+                that.get_lecturer_list();
+                //获取已添加的课节
+                that.get_check_source_sure();
+                //图片上传和视频上传
+                layList.form.on('radio(is_pink)', function (data) {
+                    that.formData.is_pink = parseInt(data.value);
+                });
+                layList.form.on('radio(is_mer_visible)', function (data) {
+                    that.formData.is_mer_visible = parseInt(data.value);
+                });
+                layList.form.on('radio(pay_type)', function (data) {
+                    that.formData.pay_type = parseInt(data.value);
+                    if (that.formData.pay_type != 1) {
+                        that.formData.is_pink = 0;
+                        that.formData.member_pay_type = 0;
+                        that.formData.member_money = 0;
+                        that.formData.is_alone = 0;
+                        that.formData.brokerage_ratio = 0;
+                        that.formData.brokerage_two = 0;
+                    };
+                    that.$nextTick(function () {
+                        layList.form.render('radio');
+                    });
+                });
+                layList.form.on('radio(is_alone)', function (data) {
+                    that.formData.is_alone = parseInt(data.value);
+                    if (that.formData.is_alone != 1) {
+                        that.formData.brokerage_ratio = 0;
+                        that.formData.brokerage_two = 0;
+                    };
+                    that.$nextTick(function () {
+                        layList.form.render('radio');
+                    });
+                });
+                layList.form.on('radio(member_pay_type)', function (data) {
+                    that.formData.member_pay_type = parseInt(data.value);
+                    if (that.formData.member_pay_type != 1) {
+                        that.formData.member_money = 0;
+                    };
+                    that.$nextTick(function () {
+                        layList.form.render('radio');
+                    });
+                });
+                layList.select('subject_id', function (obj) {
+                    that.formData.subject_id = obj.value;
+                });
+                layList.select('lecturer_id', function (obj) {
+                    that.formData.lecturer_id = obj.value;
+                });
+                layList.form.on('radio(is_fake_pink)', function (data) {
+                    that.formData.is_fake_pink = parseInt(data.value);
+                });
+                that.$nextTick(function () {
+                    that.uploader = ossUpload.upload({
+                        id: 'ossupload',
+                        FilesAddedSuccess: function () {
+                            that.is_video = true;
+                        },
+                        uploadIng: function (file) {
+                            that.videoWidth = file.percent;
+                        },
+                        success: function (res) {
+                            layList.msg('上传成功');
+                            that.videoWidth = 0;
+                            that.is_video = false;
+                            that.setContent(res.url);
+                        },
+                        fail: function (err) {
+                            that.videoWidth = 0;
+                            that.is_video = false;
+                            layList.msg(err);
+                        }
+                    })
+                });
+            }
+        })
+    })
+</script>
+{/block}

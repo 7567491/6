@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$public_data.site_name|default='教育平台'}</title>
+    <meta name="keywords" content="{$seo_keywords|default=''}">
+    <meta name="description" content="{$seo_description|default=''}">
+    <link rel="icon" href="{$site_favicon|default=''}" type="image/png">
+    
+    <!-- 基础样式 -->
+    <link rel="stylesheet" href="{$img_domain}pc/styles/normalize.css">
+    <link rel="stylesheet" href="{$img_domain}pc/styles/global.min.css">
+    <link rel="stylesheet" href="{$img_domain}pc/font/iconfont.css">
+    
+    <!-- Element UI -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    
+    <!-- Vue和Element UI脚本 -->
+    <script src="https://unpkg.com/vue@2/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    
+    <!-- 全局变量设置 -->
+    <script type="text/javascript">
+        var img_domain = "{$img_domain}";
+        var router = {
+            home: "{:url('/index')}",
+            course: "{:url('/course')}",
+            live: "{:url('/live')}",
+            virtual: "{:url('/virtual')}",
+            articles: "{:url('/articles')}",
+            teachers: "{:url('/teachers')}"
+        };
+        
+        function fx_cdn_img(src) {
+            if (!src) return '';
+            if (src.indexOf('http') === 0) {
+                return src;
+            }
+            return img_domain + src;
+        }
+    </script>
+    
+    <style>
+        /* 临时样式修复 */
+        [v-cloak] { 
+            display: none !important; 
+        }
+        
+        .main {
+            min-height: 100vh;
+            background: #f5f5f5;
+        }
+        
+        .banner-box {
+            background: #fff;
+            padding: 20px 0;
+        }
+        
+        .g-banner {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .g-banner-content {
+            width: 100%;
+            height: 400px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .home-section {
+            max-width: 1200px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .sec-hd {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .sec-hd h3 {
+            font-size: 24px;
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        
+        .sec-hd p {
+            color: #666;
+            margin: 0;
+        }
+        
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .course-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .course-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .course-cover {
+            width: 100%;
+            height: 160px;
+            background: #f0f0f0;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        
+        .course-info {
+            padding: 15px;
+        }
+        
+        .course-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .course-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .course-price {
+            color: #e74c3c;
+            font-weight: 500;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="main">
+            <!-- 轮播横幅区域 -->
+            <div class="banner-box">
+                <div class="g-banner">
+                    <div class="g-banner-content">
+                        <el-carousel height="400px" v-if="bannerList.length > 0">
+                            <el-carousel-item v-for="(banner, index) in bannerList" :key="index">
+                                <div 
+                                    class="banner-item" 
+                                    :style="{ 
+                                        background: 'url(' + fx_cdn_img(banner.pic) + ') center/cover',
+                                        width: '100%',
+                                        height: '100%',
+                                        cursor: banner.url ? 'pointer' : 'default'
+                                    }"
+                                    @click="banner.url && window.open(banner.url, '_blank')"
+                                >
+                                </div>
+                            </el-carousel-item>
+                        </el-carousel>
+                        <div v-else class="banner-placeholder">
+                            <el-alert
+                                title="欢迎来到教育平台"
+                                type="info"
+                                center
+                                :closable="false">
+                            </el-alert>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 推荐内容区域 -->
+            <div v-if="loading" class="loading">
+                <el-icon class="is-loading"><i class="el-icon-loading"></i></el-icon>
+                正在加载内容...
+            </div>
+            
+            <div v-else-if="error" class="error-message">
+                <el-alert
+                    :title="error"
+                    type="error"
+                    center
+                    show-icon>
+                </el-alert>
+            </div>
+            
+            <template v-else>
+                <!-- 课程推荐模块 -->
+                <div v-for="recommend in recommendList" :key="recommend.id" class="home-section">
+                    <div class="sec-hd">
+                        <h3>{{ recommend.title || '推荐内容' }}</h3>
+                        <p>{{ recommend.explain || '为您精心挑选的优质内容' }}</p>
+                    </div>
+                    
+                    <div class="course-grid" v-if="recommend.list && recommend.list.length > 0">
+                        <a 
+                            v-for="item in recommend.list" 
+                            :key="item.id"
+                            :href="getCourseUrl(item)"
+                            class="course-card"
+                            target="_blank"
+                        >
+                            <div 
+                                class="course-cover" 
+                                :style="{ backgroundImage: 'url(' + fx_cdn_img(item.image) + ')' }"
+                            ></div>
+                            <div class="course-info">
+                                <h4 class="course-title">{{ item.title }}</h4>
+                                <div class="course-meta">
+                                    <span class="course-price">
+                                        {{ item.money == 0 ? '免费' : '¥' + item.money }}
+                                    </span>
+                                    <span>{{ item.browse_count || 0 }}人学习</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div v-else class="error-message">
+                        暂无相关内容
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                loading: true,
+                error: null,
+                bannerList: {json_encode($home_data.pc_banner_list ?? [])},
+                recommendList: {json_encode($pc_recommend_list.recommend ?? [])},
+                siteInfo: {
+                    name: "{$public_data.site_name|default='教育平台'}",
+                    logo: "{$public_data.site_logo|default=''}",
+                    description: "{$public_data.site_description|default=''}"
+                }
+            },
+            mounted() {
+                this.loading = false;
+                document.title = this.siteInfo.name;
+                
+                // 检查资源加载状态
+                this.checkResources();
+            },
+            methods: {
+                fx_cdn_img: window.fx_cdn_img,
+                
+                getCourseUrl(item) {
+                    if (item.is_light) {
+                        return router.home + '/single-course?id=' + item.id;
+                    }
+                    return router.home + '/view-course?id=' + item.id;
+                },
+                
+                checkResources() {
+                    // 检查关键CSS文件是否加载
+                    const links = document.querySelectorAll('link[rel="stylesheet"]');
+                    let loadedCount = 0;
+                    const totalLinks = links.length;
+                    
+                    if (totalLinks === 0) {
+                        console.warn('未找到样式文件');
+                        return;
+                    }
+                    
+                    links.forEach(link => {
+                        if (link.sheet) {
+                            loadedCount++;
+                        } else {
+                            link.addEventListener('load', () => {
+                                loadedCount++;
+                                if (loadedCount === totalLinks) {
+                                    console.log('所有样式文件加载完成');
+                                }
+                            });
+                            
+                            link.addEventListener('error', (e) => {
+                                console.error('样式文件加载失败:', e.target.href);
+                                if (!this.error) {
+                                    this.error = '部分资源加载失败，页面可能显示异常';
+                                }
+                            });
+                        }
+                    });
+                    
+                    if (loadedCount === totalLinks) {
+                        console.log('所有样式文件已加载');
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

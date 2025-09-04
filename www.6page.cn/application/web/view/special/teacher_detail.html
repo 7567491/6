@@ -1,0 +1,238 @@
+{extend name="public/container"}
+{block name="title"}讲师详情{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="teacher-detail">
+    <div class="teacher-banner">
+        <div class="teacher-banner-inner">
+            <div class="teacher-avatar">
+                <img src="{$teacher.lecturer_head}" alt="{$teacher.lecturer_name}" title="{$teacher.lecturer_name}" />
+            </div>
+            <div class="teacher-banner-info">
+                <h2>{$teacher.lecturer_name}</h2>
+                <div class="teacher-label">
+                    {foreach $teacher.label as $key=>$item}
+                    <span class="teacher-label-item">{$item}</span>
+                    {/foreach}
+                </div>
+                <div class="teacher-intro">
+                    {$teacher.explain}
+                </div>
+                <div class="teacher-meta">
+                    <span>
+                        学员 <em>{$teacher.study}</em> 人
+                    </span>
+                    <span>
+                        课程 <em>{$teacher.curriculum}</em>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section-main teacher-minheight">
+        <div class="detail js-hook-detail">
+            <div class="detail-tabs">
+                <div class="tabs-container">
+                    <div class="tabs-wrap">
+                        <div class="detail-tab" :class="{active: currentTab=='intro'}" @click="currentTab='intro'">课程介绍</div>
+                        <div class="detail-tab" :class="{active: currentTab=='course'}" @click="currentTab='course'">讲师课程</div>
+                    </div>
+                </div>
+            </div>
+            <div class="teacher-detail-tab-panel-container">
+                <div class="teacher-switch-panel" v-show="currentTab=='intro'">
+                    <div class="course-detail">
+                        {$teacher.introduction}
+                    </div>
+                </div>
+                <div class="teacher-switch-panel" v-show="currentTab=='course'">
+                    <div class="sec-wrapper">
+                        <div class="sec-bd">
+                            {volist name='$course_list' id='item'}
+                            <div>
+                                <section class="course-card-expo-wrapper">
+                                    <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                        <div class="kc-course-card-cover">
+                                            <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                            <!--图文-->
+                                            {eq name="item.type" value="1"}
+                                            <div title="图文课程" class="kc-course-type"><i class="el-icon-picture-outline"></i></div>
+                                            {/eq}
+                                            <!--音频课程-->
+                                            {eq name="item.type" value="2"}
+                                            <div title="音频课程" class="kc-course-type"><i class="el-icon-headset"></i></div>
+                                            {/eq}
+                                            <!--视频课程-->
+                                            {eq name="item.type" value="3"}
+                                            <div title="视频课程" class="kc-course-type"><i class="el-icon-video-play"></i></div>
+                                            {/eq}
+                                            <!--直播课程-->
+                                            {eq name="item.type" value="4"}
+                                            <div title="直播课程" class="kc-course-type"><i class="el-icon-video-camera"></i></div>
+                                            {/eq}
+                                            <!--套餐课程-->
+                                            {eq name="item.type" value="5"}
+                                            <div title="套餐课程" class="kc-course-type"><i class="el-icon-s-operation"></i></div>
+                                            {/eq}
+                                            <!--精简课程-->
+                                            {eq name="item.type" value="6"}
+                                            <div title="精简课程" class="kc-course-type"><i class="el-icon-position"></i></div>
+                                            {/eq}
+                                        </div>
+                                        <div class="kc-course-card-content">
+                                            <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                            <div class="kc-course-card-labels">
+                                                {foreach $item['label'] as $label_key=>$label}
+                                                <span class="kc-course-card-labels-item">{$label}</span>
+                                                {/foreach}
+                                            </div>
+                                            <div class="kc-course-card-footer normal">
+                                                <div class="kc-coursecard-footer-left">
+                                        <span class="kc-course-card-price">
+                                            <span class="kc-coursecard-price">
+                                                {eq name="item.pay_type" value="1"}
+                                                <span class="kc-coursecard-price-icon">
+                                                    <span class="coursedot">¥</span>
+                                                </span>
+                                                <span>{$item.money}</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="0"}
+                                                <span>免费</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="2"}
+                                                <span>加密</span>
+                                                {/eq}
+                                            </span>
+                                        </span>
+                                                    {neq name="item.member_money" value="$item.money"}
+                                                    <span class="kc-vip-price">
+                                            <span class="kc-vip-label">VIP</span>
+                                            <span class="kc-vip-num">{$item.member_money==0 ? '免费' : '¥'.$item.member_money}</span>
+                                        </span>
+                                                    {/neq}
+                                                    <span class="kc-course-card-student-apply-num">{$item.browse_count}人报名</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </section>
+                            </div>
+                            {/volist}
+                        </div>
+                    </div>
+                    {eq name="count" value="0"}
+                    <el-empty image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="暂无课程～"></el-empty>
+                    {/eq}
+                    <div  class="init-pagination">
+                        {$course_list->render()}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/auth',
+        'scripts/util',
+        'css!styles/instructorListDetils.css'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, authApi, util) {
+        Vue.use(ELEMENT);
+        var teacher_id = {$id};
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                currentTab: 'intro',
+                lecturerDetails: {},
+                tipList: [
+                    {
+                        title: '讲师详情',
+                        value: 1
+                    },
+                    {
+                        title: '课程专栏',
+                        value: 2
+                    }
+                ],
+                tipLeft: 0,
+                selectValue: 1,
+                paginationData: {
+                    pageSize: 16,
+                    pageNum: 1
+                },
+                total: 0,
+                courseList: []
+            },
+            watch: {
+                selectValue: {
+                    handler(val) {
+                        this.$nextTick(() => {
+                            this.tipLeft = this.$refs[`react${val}`][0].offsetLeft + 'px';
+                        })
+                    },
+                    immediate: true
+                },
+
+            },
+            created: function () {
+                this.id = teacher_id;
+                this.lecturer_details();
+                this.lecturer_special_list();
+            },
+            methods: {
+                // 详情
+                lecturer_details: function () {
+                    authApi.lecturer_details({
+                        id: this.id
+                    }).then(function (res) {
+                        vm.lecturerDetails = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 课程
+                lecturer_special_list: function () {
+                    authApi.lecturer_special_list({
+                        lecturer_id: this.id,
+                        page: this.paginationData.pageNum,
+                        limit: this.paginationData.pageSize
+                    }).then(function (res) {
+                        vm.courseList = res.data.data;
+                        vm.total = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 选项卡
+                selectTip(item, index) {
+                    this.selectValue = item.value
+                },
+                // 分页
+                handleCurrentChange(val) {
+                    this.paginationData.pageNum = val;
+                    this.lecturer_special_list();
+                },
+                goTask: function (id) {
+                    window.location.href = this.router.special_details + '?id=' + id;
+                }
+            }
+        });
+    });
+</script>
+{/block}

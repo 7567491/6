@@ -1,0 +1,35 @@
+<div class="my-exam">
+    <h1 class="my-title" style="margin-bottom: 20px">我的证书</h1>
+    <div class="my-wrong-list">
+        <ul class="wy-test-list">
+            <li v-for="item in certificateList" :key="item.id" @click="goQuestion(item)">
+                <a :href="router.view_certificate + '?obtain=' + item.obtain + '&id=' + item.id">
+                    <div class="wy-test-title">
+                        {{ item.content. title }}
+                    </div>
+                    <div class="wy-test-info">
+                        <div class="wy-test-meta" style="color: #999" v-if="item.obtain === 1">您已学完所有课程</div>
+                        <div class="wy-test-meta" v-else>
+                            <div class="wy-test-people">
+                                题目数：{{ item.content.item_number }}
+                            </div>
+                            <div class="wy-test-people">
+                                错题数：{{ item.content.wrong_question }}
+                            </div>
+                            <div class="wy-test-people">
+                                考试用时：{{ item.content.duration | formatTime }}
+                            </div>
+                        </div>
+                        <div>
+                            <el-button type="default" round size="small">查看证书</el-button>
+                        </div>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <el-empty v-if="certificateList.length==0 && loaded" image="/pc/images/empty4.png" description="暂无证书～"></el-empty>
+    <div v-if="certificateList.length" class="pagination">
+        <el-pagination layout="prev, pager, next" :total="count" :page-size="limit" :current-page.sync="page"></el-pagination>
+    </div>
+</div>

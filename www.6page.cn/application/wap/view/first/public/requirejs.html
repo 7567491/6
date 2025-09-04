@@ -1,0 +1,83 @@
+
+<script src="{$Think.const.IMG_DOMAIN}{__PLUG_PATH}requirejs/require.js"></script>
+<script>
+    var requireBaseUrl = '';
+    if (img_domain) {
+        requireBaseUrl = img_domain;
+    } else {
+        requireBaseUrl = '//'+location.hostname + (location.port ? ':'+location.port : '');
+    }
+    requirejs.config({
+        urlArgs: "v=1638175803",
+        map: {
+            '*': {
+                'css': '{$Think.const.IMG_DOMAIN}{__PLUG_PATH}requirejs/css.min.js'
+            }
+        },
+        shim: {
+            'iview': {
+                deps: ['css!iviewcss']
+            },
+            'layer': {
+                deps: ['css!layercss']
+            },
+            'ydui': {
+                deps: ['css!yduicss']
+            },
+            'vant': {
+                deps: ['css!vantcss']
+            },
+            'cityselect': {
+                deps: ['css!yduicss']
+            },
+            'swiper': {
+                deps: ['css!swipercss']
+            },
+            'qrcode': {
+                exports: 'QRCode'
+            }
+        },
+        baseUrl: requireBaseUrl +'{__PUBLIC_PATH}',
+        paths: {
+            'static': 'static',
+            'components': '{__WAP_PATH}/components',
+            'images': '{__WAP_PATH}/images',
+            'vue': 'static/plug/vue/dist/vue.min',
+            'axios': 'static/plug/axios.min',
+            'iview': 'static/plug/iview/dist/iview.min',
+            'iviewcss': 'static/plug/iview/dist/styles/iview',
+            'lodash': 'static/plug/lodash',
+            'layer': 'static/plug/layer/layer',
+            'layercss': 'static/plug/layer/theme/default/layer',
+            'jquery': 'static/plug/jquery-1.10.2.min',
+            'moment': 'static/plug/moment',
+            'sweetalert': 'static/plug/sweetalert2/sweetalert2.all.min',
+            'helper': 'static/plug/helper',
+            'store': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/module/store',
+            'better-scroll': "static/plug/better-scroll",
+            'ydui': "static/plug/ydui/ydui",
+            'yduicss': "static/plug/ydui/ydui-px",
+            'vant': "static/plug/vant/vant.min",
+            'vantcss': "static/plug/vant/vant",
+            'cityselect': "static/plug/ydui/cityselect",
+            'reg-verify': "static/plug/reg-verify",
+            'special-type': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/special-type',
+            'clipboard': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/clipboard',
+            'quick': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/quick',
+            'text': 'static/plug/requirejs/text',
+            'payment': '{__WAP_PATH}/components/payment/index',
+            'progress': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/vue-circle-progress',
+            'swipercss': '{$Think.const.IMG_DOMAIN}{__PLUG_PATH}swiper5/css/swiper.min',
+            'swiper': '{$Think.const.IMG_DOMAIN}{__PLUG_PATH}swiper5/js/swiper',
+            'question-guide': '{__WAP_PATH}/components/question_guide/index',
+            'qrcode': '{$Think.const.IMG_DOMAIN}{__PUBLIC_PATH}system/js/qrcode.min',
+            'vue-circle-progress': '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/vue-circle-progress',
+            'picker': '{$Think.const.IMG_DOMAIN}{__PLUG_PATH}picker.min',
+            'recommend-poster': '{__WAP_PATH}/components/recommend/poster/index',
+            'recommend-problem': '{__WAP_PATH}/components/recommend/problem/index',
+            'recommend-question': '{__WAP_PATH}/components/recommend/question/index',
+            'shortcut': '{__WAP_PATH}/components/shortcut/index',
+            'evaluate-list': '{__WAP_PATH}/components/evaluate-list/index'
+        }
+    });
+</script>

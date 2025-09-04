@@ -1,0 +1,122 @@
+{extend name="public/container"}
+{block name="title"}{$title}答题卡{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-header">
+        <a class="el-button el-button--default el-button--small" :href="'{:url('/view-test')}?test_id=' + test_id + '&e_id=' + e_id + '&index=' + index">
+            <i class="el-icon-arrow-left"></i> 返回答题
+        </a>
+    </div>
+    <div class="wy-exam-sheet-title">{$title}</div>
+    <div class="wy-exam-sheet-main">
+        <div class="wy-exam-sheet-legend">
+            <div class="wy-exam-sheet-status">答题情况</div>
+            <ul>
+                <li class="right">正确</li>
+                <li class="wrong">错误</li>
+                <li class="unknown">未答</li>
+            </ul>
+        </div>
+        <div v-if="questions.length" class="wy-exam-sheet-question">
+            <a
+                v-for="(item, index) in questions"
+                :class="{
+                    right: item.is_correct === 2,
+                    wrong: item.is_correct === 1
+                 }"
+                :href="'{:url('/view-test')}?test_id=' + test_id + '&e_id=' + e_id + '&index=' + index + '&is_analysis=' + 1"
+            >{{ index + 1 }}</a>
+        </div>
+    </div>
+    <div v-if="from !== 'problem_result'" class="wy-exam-sheet-footer">
+        <a href="javascript:" class="el-button el-button--default is-round" @click="onAgain(1)">重新答题</a>
+        <a href="javascript:" class="el-button el-button--primary is-round" @click="onAgain(2)" style="color: #fff">提交练习</a>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'scripts/util',
+        'api/exam'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, util, examApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                test_id: 0,
+                e_id: 0,
+                index: 0,
+                questions: [],
+                from: ''
+            },
+            created: function () {
+                this.test_id = util.getParmas('test_id');
+                this.e_id = util.getParmas('record_id');
+                if (util.getParmas('index')) {
+                    this.index = util.getParmas('index');
+                }
+                if (util.getParmas('from')) {
+                    this.from = util.getParmas('from');
+                }
+                this.getSheet();
+            },
+            methods: {
+                getSheet: function () {
+                    var vm = this
+                    examApi.get_answer_sheet({
+                        test_id: this.test_id,
+                        type: 1,
+                        record_id: this.e_id
+                    }).then(function (res) {
+                        var questions = res.data;
+                        for (var i = questions.length; i--;) {
+                            if (!Array.isArray(questions[i].userAnswer)) {
+                                Object.assign(questions[i], questions[i].userAnswer);
+                            }
+                        }
+                        vm.questions = questions;
+                    })
+                },
+                onAgain: function (n) {
+                    var that=this;
+                    examApi.submit_test({
+                        examination_id: that.e_id
+                    }).then(function (res) {
+                        util.delCookie('e_id');
+                        if(n==1){
+                            location.href = "{:url('/test')}?id=" + that.test_id;
+                        }else{
+                            location.href = "{:url('/test-result')}?test_id=" + that.test_id;
+                        }
+                    }).catch(function (err) {
+                        that.$message.error('该测试可能已经提交过，请返回课程目录重新答题');
+                    })
+                }
+            }
+        })
+    })
+</script>
+{/block}

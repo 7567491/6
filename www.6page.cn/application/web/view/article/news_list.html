@@ -1,0 +1,145 @@
+{extend name="public/container"}
+{block name="title"}文章资讯-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="global-main">
+    <div class="wy-block article-cate-block">
+        <div class="wy-block-container">
+            <div class="wy-article-cate">
+                <div class="wy-article-cate-item">
+                    <a href="{:url('/articles')}" {eq name="cid" value="0"}class="active"{/eq}>全部</a>
+                </div>
+                {foreach $category as $key=>$item }
+                <div class="wy-article-cate-item">
+                    <a href="{:url('/articles/'.$item['id'])}" {eq name="cid" value="$item.id"}class="active"{/eq}>{$item.title}</a>
+                </div>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    <div class="wy-block article-block">
+        <div class="wy-block-container">
+            <div class="wy-article-list">
+                {volist name='articles' id='item'}
+                <a href="{:url('/view-article/'.$item['id'])}" class="article-item" title="{$item.title}">
+                    <div class="article-thumb" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image_input))})"></div>
+                    <div class="article-info">
+                        <h3 class="article-title">{$item.title}</h3>
+                        <div class="article-labels">
+                            {foreach $item['label'] as $label_key=>$label}
+                            <span class="article-label-item">{$label}</span>
+                            {/foreach}
+                        </div>
+                        <div class="article-description">
+                            {$item.synopsis}
+                        </div>
+                        <div class="article-meta">
+                            <div class="article-meta-item">
+                                <i class="el-icon-view"></i>
+                                {$item.visit}
+                            </div>
+                            <div class="article-meta-item">
+                                <i class="el-icon-time"></i>
+                                {$item.add_time}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {/volist}
+            </div>
+            <div class="init-pagination">
+                {$articles->render()}
+            </div>
+        </div>
+    </div>
+</div>
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{include file='public/footer' /}
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'api/article',
+        'api/auth'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, articleApi, authApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin],
+            data: {
+                active: '0',
+                articleCate: [],
+                articleList: [],
+                newsData: [],
+                articleUnifiendList: [],
+                page: 1,
+                limit: 10,
+                search: '',
+                count: 0
+            },
+            created: function () {
+                // this.get_article_cate();
+                // this.get_article_list();
+                this.news_data();
+                this.get_article_unifiend_list();
+            },
+            methods: {
+                get_article_cate: function () {
+                    articleApi.get_article_cate().then(function (res) {
+                        vm.articleCate = res.data;
+                        vm.articleCate.unshift({
+                            id: 0,
+                            title: '全部'
+                        });
+                    });
+                },
+                get_article_list: function () {
+                    articleApi.get_article_list({
+                        page: this.page,
+                        limit: this.limit,
+                        cid: this.active,
+                        search: this.search
+                    }).then(function (res) {
+                        var data = res.data;
+                        vm.count = data.count;
+                        vm.articleList = data.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                news_data: function () {
+                    articleApi.news_data().then(function (res) {
+                        vm.newsData = res.data.pc_news_list_rotation_chart;
+                    });
+                },
+                get_article_unifiend_list: function () {
+                    authApi.get_article_unifiend_list({
+                        limit: 9,
+                        type: 2
+                    }).then(function (res) {
+                        vm.articleUnifiendList = res.data;
+                    });
+                },
+                tabClick: function () {
+                    this.page = 1;
+                    this.get_article_list();
+                },
+                currentChange: function (val) {
+                    this.page = val;
+                    this.get_article_list();
+                }
+            }
+        });
+    });
+</script>
+{/block}

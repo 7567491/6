@@ -1,0 +1,96 @@
+
+{extend name="public/container"}
+{block name="title"}图文详情-{$Auth_site_name}{/block}
+{block name="head"}
+<style>
+    .try-btn {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        width: 100%;
+        padding: .2rem .3rem;
+    }
+
+    .try-btn a {
+        display: block;
+        width: 100%;
+        height: .88rem;
+        border-radius: .44rem;
+        background-color: #2C8EFF;
+        font-size: .28rem;
+        line-height: .88rem;
+        text-align: center;
+        color: #FFFFFF;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="single-text-detail">
+        <div ref="header" class="header">
+            <i class="iconfont iconxiangyou" @click="goBack"></i>
+            <div>{{ title }}</div>
+        </div>
+        <div class="main" v-html="isTry == '1' ? profile.try_content : profile.content"></div>
+        <div v-if="isTry == '1'" style="height: 1.28rem;"></div>
+        <div v-if="isTry == '1'" class="try-btn">
+            <a :href="'{:url('/m/single-course')}?id=' + id">已试看，去购买</a>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'helper', 'store'], function (Vue, $h, $http) {
+        var isWechat = {$isWechat ? 'true' : 'false'};
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                title: '',
+                profile: {},
+                id: 0,
+                isTry: ''
+            },
+            created: function () {
+                this.isTry = $h.getParmas('try');
+                this.id = $h.getParmas('id');
+                this.getDetail();
+            },
+            methods: {
+                getDetail: function () {
+                    $h.loadFFF();
+                    $http.baseGet($h.U({
+                        c: 'special',
+                        a: 'single_img_content',
+                        q: {
+                            id: this.id
+                        }
+                    }), function (res) {
+                        var data = res.data.data;
+                        $h.loadClear();
+                        vm.title = data.title;
+                        document.title = data.title;
+                        vm.profile = data.profile;
+                        if (isWechat) {
+                            mapleWx($jssdk(), function () {
+                                this.onMenuShareAll({
+                                    title: vm.title,
+                                    desc: vm.title,
+                                    imgUrl: vm.image,
+                                    link: data.link_url
+                                });
+                            });
+                        }
+                    }, function () {
+                        $h.loadClear();
+                    });
+                },
+                goBack: function () {
+                    window.location.href = "{:url('/m/single-course')}?id=" + this.id;
+                }
+            }
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,118 @@
+<div class="my-member">
+    <div class="section">
+        <div class="my-title member-flex">
+            会员权益
+            <el-button class="member-card" :disabled="userInfo.level && userInfo.is_permanent" @click="exchangeVisible = true" size="small">卡密兑换</el-button>
+        </div>
+        <div class="member-right">
+            <ul>
+                <li v-for="item in interests" :key="item.id">
+                    <div class="my-member-right-icon">
+                        <el-image :src="item.pic" fit="cover">
+                            <div slot="error" class="image-slot">
+                                <i class="el-icon-picture-outline"></i>
+                            </div>
+                        </el-image>
+                    </div>
+                    <div class="my-member-right-intro">
+                        <div class="my-member-right-name">{{ item.name }}</div>
+                        <div class="my-member-right-explain">{{ item.explain }}</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="section">
+        <div class="my-title">会员套餐</div>
+        <div class="member-level">
+            <div v-for="(item, index) in memberShipList" :key="item.id" class="member-level-item">
+                <label>
+                    <input v-model="filterData.type" :value="index" type="radio" hidden>
+                    <div class="member-level-inner">
+                        <div class="member-level-title">{{ item.title }}</div>
+                        <div class="member-free-type" v-if="item.is_free">
+                            <div class="member-level-price">
+                                <span>0</span>元
+                            </div>
+                            <div class="member-level-old-price no-style">
+                                试用{{ item.vip_day }}天
+                            </div>
+                        </div>
+                        <div class="member-pay-type" v-else>
+                            <div class="member-level-price">
+                                <span>{{ item.price | priceReal }}</span>元
+                            </div>
+                            <div class="member-level-old-price">
+                                {{ item.original_price | priceReal }}元
+                            </div>
+                        </div>
+                        <i class="el-icon-check"></i>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="section">
+        <div class="my-title">支付金额</div>
+        <div class="my-coin-need">
+            <em>{{memberShipList[filterData.type]?memberShipList[filterData.type]['price']: 0}}</em>元
+        </div>
+    </div>
+    <div v-show="!userInfo.level || !userInfo.is_permanent" class="section">
+        <div class="my-title">支付方式</div>
+        <div class="member-paytype">
+<!--            <label v-if="isYue">-->
+<!--                <input v-model="filterData.payType" value="yue" type="radio" hidden>-->
+<!--                <div class="member-paytype-item">-->
+<!--                    <div class="member-paytype-yue">-->
+<!--                        余额支付-->
+<!--                        <div>余额：￥{{ nowMoney }}</div>-->
+<!--                    </div>-->
+<!--                    <i class="el-icon-check"></i>-->
+<!--                </div>-->
+<!--            </label>-->
+
+            <label v-if="isWechat">
+                <input v-model="filterData.payType" value="weixin" type="radio" hidden>
+                <div class="member-paytype-item">
+                    <div class="member-paytype-wechat">微信支付</div>
+                    <i class="el-icon-check"></i>
+                </div>
+            </label>
+            <label v-if="isAlipay">
+                <input v-model="filterData.payType" value="zhifubao" type="radio" hidden>
+                <div class="member-paytype-item">
+                    <div class="member-paytype-alipay">支付宝支付</div>
+                    <i class="el-icon-check"></i>
+                </div>
+            </label>
+        </div>
+        <div class="member-pay-btn">
+            <div v-show="!isReset" ref="qrcode"></div>
+            <div v-show="!isReset" class="pay-tip">请用{{ filterData.payType === 'weixin' ? '微信' : '支付宝' }}扫码支付，支付<span>{{ memberShipList.length && memberShipList[filterData.type].price | priceReal }}</span>元
+            </div>
+            <el-button class="member-gopay" v-show="isReset" @click="create_order" :disabled="!filterData.payType">去支付</el-button>
+        </div>
+    </div>
+    <div class="section">
+        <div class="my-title">会员说明</div>
+        <div class="my-member-tips">
+            <ol>
+                <li v-for="item in description" :key="item.id">{{ item.text }}</li>
+            </ol>
+        </div>
+    </div>
+    <el-dialog title="卡密兑换" :visible.sync="exchangeVisible" width="512px" center>
+        <el-form>
+            <el-form-item>
+                <el-input v-model.trim="member_code" type="text" placeholder="请输入卡号" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-input v-model.trim="member_pwd" placeholder="请输入卡密" autocomplete="off" show-password></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button @click.native="confirm_activation">确定</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>

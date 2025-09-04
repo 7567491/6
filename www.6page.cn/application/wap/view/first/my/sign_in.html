@@ -1,0 +1,228 @@
+
+{extend name="public/container"}
+{block name="title"}签到-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    body {
+        background-color: #f5f5f5;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="sign-in">
+        <div class="header">
+            <div class="cont">
+                <div class="image" @click="myUser">
+                    <img :src="fx_cdn_img(userInfo.avatar)" class="img">
+                </div>
+                <div class="text" @click="myUser">
+                    <div class="name" v-html="userInfo.nickname"></div>
+                    <div class="info">{$gold_name}: {{ userInfo.gold_num }}</div>
+                </div>
+                <a class="btn" :href="$h.U({c: 'my', a: 'sign_in_list'})">明细</a>
+            </div>
+        </div>
+        <div class="main">
+            <div class="head">
+                <div class="list">
+                    <div class="item">
+                        <div class="image">
+                            <img :src="isSign ? '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/stars2.png' : '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/stars1.png'"
+                                class="star">
+                        </div>
+                        <div class="day">每日签到获得{$gold_coin}{$gold_name}</div>
+                    </div>
+                </div>
+                <button class="btn" v-if="isSign" type="button" @click="show_sign_image">已签到</button>
+                <button class="btn" v-else type="button" @click="sign">立即签到</button>
+            </div>
+            <div class="foot">
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/lock.png" class="lock">
+                <div class="panel">
+                    <div class="name">已累计签到</div>
+                    <div class="count">
+                        <div class="cont">
+                            <div class="wrap">
+                                <div v-for="(item, index) in updateTotal" :key="index" class="item">{{ item }}</div>
+                            </div>
+                            <div class="unit">天</div>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="records.length" class="record">
+                    <div v-for="(item, index) in records" :key="index" class="item">
+                        <div class="text">
+                            <div class="name">签到</div>
+                            <div class="time">{{ item.add_time }}</div>
+                        </div>
+                        <div class="num">+{{ item.number }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mask" v-show="is_poster" @click="is_poster = false"></div>
+        <div class="poster" v-show="is_poster">
+            <img :src="filename" />
+            <p v-show="filename">长按保存,分享朋友</p>
+        </div>
+    </div>
+    {include file="public/store_menu"}
+</div>
+<script>
+    var signed="{$signed}",signCount={$signCount},sign_image = '{$sign_image}';
+    require(['vue', 'helper', 'store', 'qrcode', 'quick'], function (Vue, $h, app, QRCode) {
+        new Vue({
+            el: '#app',
+            data: {
+                userInfo: {},
+                total: signCount,
+                isSign: signed ? true : false,
+                records: [],
+                filename: '',
+                is_poster: false,
+                poster: null
+            },
+            computed: {
+                updateTotal: function () {
+                    let str = '0000',
+                        total = this.total,
+                        len = 0;
+                    if (!total) {
+                        return str;
+                    }
+                    if (typeof total === 'number') {
+                        total = total.toString();
+                    }
+                    len = total.length;
+                    if (len >= 4) {
+                        return total;
+                    }
+                    str += total;
+                    str = str.substring(len);
+                    return str;
+                }
+            },
+            created: function () {
+                this.getUserInfo();
+                this.getUserSign();
+            },
+            methods: {
+                sign: function () {
+                    var that = this;
+                    app.baseGet($h.U({ c: 'auth_api', a: 'user_sign' }), function (res) {
+                        that.isSign = true;
+                        that.is_poster = true;
+                        that.filename = res.data.data;
+                        that.userInfo.gold_num++;
+                        that.total = that.total + 1;
+                        that.getUserSign();
+                        that.getPoster();
+                        return $h.pushMsg(res.data.msg);
+                    }, function (res) {
+                        that.is_poster = false;
+                        that.isSign = false;
+                    });
+                },
+                show_sign_image: function () {
+                    if (this.filename) {
+                        this.is_poster = true;
+                    } else {
+                        this.getPoster();
+                    }
+                },
+                getUserSign: function () {
+                    app.baseGet($h.U({ c: 'auth_api', a: 'getUserList' }), function (res) {
+                        this.records = res.data.data;
+                    }.bind(this));
+                },
+                myUser: function () {
+                    window.location.href = $h.U({
+                        s: true,
+                        c: 'my',
+                        a: 'index'
+                    });
+                },
+                getUserInfo: function () {
+                    var that = this;
+                    app.baseGet($h.U({ c: 'auth_api', a: 'userInfo' }), function (res) {
+                        that.userInfo = res.data.data;
+                    });
+                },
+                getPoster: function () {
+                    $h.loadFFF();
+                    app.baseGet($h.U({
+                        c: 'auth_api',
+                        a: 'get_user_sign_poster'
+                    }), function (res) {
+                        $h.loadClear();
+                        this.poster = res.data.data;
+                        this.createPoster();
+                    }.bind(this), function () {
+                        $h.loadClear();
+                    });
+                },
+                createPoster: function () {
+                    $h.loadFFF();
+                    var that = this;
+                    var imagePromise = new Promise(function (resolve, reject) {
+                        var image = new Image();
+                        image.crossOrigin = 'anonymous';
+                        image.src = that.poster.poster + '?' + new Date().getTime();
+                        image.onload = function () {
+                            resolve(image);
+                        };
+                        image.onerror = function () {
+                            reject('error-image');
+                        };
+                    }),
+                        qrcodePromise = new Promise(function (resolve, reject) {
+                            resolve(new QRCode(document.createElement('canvas'), that.poster.url));
+                        });
+                    Promise.all([
+                        imagePromise,
+                        qrcodePromise
+                    ]).then(function (sources) {
+                        var canvas = document.createElement('canvas'),
+                            context = canvas.getContext('2d'),
+                            date = new Date(),
+                            day = date.getDate(),
+                            month = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+                            weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                        canvas.width = 600;
+                        canvas.height = 800;
+
+                        context.fillStyle = '#FFFFFF';
+                        context.fillRect(0, 0, 600, 800);
+
+                        context.drawImage(sources[0], 30, 30, 540, 540);
+                        context.drawImage(sources[1]._el.firstElementChild, 30, 620, 130, 130);
+
+                        context.font = '24px sans-serif';
+                        context.textAlign = 'left';
+                        context.fillStyle = '#282828';
+                        // 签到语录
+                        context.fillText(that.poster.sign_talk, 300, 642);
+
+                        context.font = '24px sans-serif';
+                        context.fillStyle = '#333333';
+                        context.fillText('长按或扫描左侧二维码', 300, 700);
+
+                        // context.strokeRect(404, 710, 72, 24);
+
+                        context.font = '24px sans-serif';
+                        context.fillText('参与活动', 300, 738);
+
+                        that.filename = canvas.toDataURL('image/jpeg');
+                        $h.loadClear();
+                        that.is_poster = true;
+                    }).catch(function (err) {
+                        $h.loadClear();
+                        console.error(err);
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

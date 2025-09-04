@@ -1,0 +1,219 @@
+
+{extend name="public/container"}
+{block name="title"}图文详情-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .page {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .head {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        align-items: center;
+        padding: 0.2rem 0.3rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .head .title {
+        -webkit-box-flex: 1;
+        flex: 1;
+        min-width: 0;
+        margin-left: 0.3rem;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .head .browse {
+        margin-left: 0.3rem;
+        font-size: 0.24rem;
+        color: #999;
+    }
+
+    .head .iconfont {
+        -webkit-transform: rotate(180deg);
+        transform: rotate(180deg);
+        font-size: 0.3rem;
+    }
+
+    .content {
+        -webkit-box-flex: 1;
+        flex: 1;
+        padding: 0.3rem;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 1.2rem;
+    }
+
+    .content p {
+        font-size: 0.3rem;
+        line-height: 1.6;
+    }
+
+    .content img {
+        width: 100%;
+    }
+
+    .try-btn {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: .2rem .3rem;
+    }
+
+    .try-btn a {
+        display: block;
+        width: 100%;
+        height: .88rem;
+        border-radius: .44rem;
+        background-color: #2C8EFF;
+        font-size: .28rem;
+        line-height: .88rem;
+        text-align: center;
+        color: #FFFFFF;
+    }
+</style>
+{/block} {block name="content"}
+<div v-cloak id="app">
+    <div class="page">
+        <div class="head">
+            <a class="iconfont iconxiangyou" href="javascript:" @click="goBack"></a>
+            <div class="title"><span v-if="!isPay && taskInfo.is_try">【试看】</span>{{ taskInfo.title }}</div>
+            <div class="browse">已浏览 {{ taskInfo.play_count }}</div>
+        </div>
+        <div ref="content" class="content" v-html="!isPay && taskInfo.is_try ? taskInfo.try_content : taskInfo.content" @scroll="contentScroll"></div>
+    </div>
+    <div v-if="!isPay && taskInfo.is_try" style="height: 1.28rem;"></div>
+    <div v-if="!isPay && taskInfo.is_try" class="try-btn">
+        <a :href="specialUrl">已试看，去购买</a>
+    </div>
+{include file="public/store_menu"}
+</div>
+{/block} {block name="foot"}
+<script>
+    var uid={$userInfo['uid'] ? $userInfo['uid']:0};
+    require([
+        'vue',
+        'axios',
+        'layer',
+        '{__WAP_PATH}/js/quick.js'
+    ], function (Vue, axios, layer) {
+        var specialId = {$specialId};
+        var taskId = {$task_id};
+        var isWechat = {$isWechat ? 'true' : 'false'};
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                taskInfo: {
+                    play_count: 0
+                },
+                isPay: false,
+                specialUrl: ''
+            },
+            created: function () {
+                this.getTaskInfo();
+                this.specialUrl = "{:url('/m/view-course')}" + '?id=' + specialId
+            },
+            updated: function () {
+                this.$nextTick(function () {
+                    this.timer = setInterval(function () {
+                        if (document.readyState === 'complete') {
+                            vm.offsetHeight = vm.$refs.content.offsetHeight;
+                            vm.scrollHeight = vm.$refs.content.scrollHeight;
+                            if (vm.offsetHeight === vm.scrollHeight) {
+                                if (!vm.isPay && vm.taskInfo.is_try) {
+                                } else {
+                                    vm.setTaskView(vm.offsetHeight);
+                                }
+                            }
+                            clearInterval(vm.timer);
+                        }
+                    }, 500);
+                });
+            },
+            methods: {
+                // 获取图文信息
+                getTaskInfo: function () {
+                    var index = layer.load(1);
+                    axios.post('/wap/special/getTaskInfo', {
+                        special_id: specialId,
+                        task_id: taskId
+                    }).then(function (res) {
+                        var data = res.data.data;
+                        if (res.data.code === 200) {
+                            vm.taskInfo = data.taskInfo;
+                            vm.specialInfo = data.specialInfo;
+                            vm.isPay = data.isPay;
+                            document.title = vm.taskInfo.title
+                            if (isWechat) {
+                                mapleWx($jssdk(), function () {
+                                    this.onMenuShareAll({
+                                        title: vm.taskInfo.title,
+                                        desc: vm.taskInfo.title,
+                                        imgUrl: vm.taskInfo.image,
+                                        link: data.link_url
+                                    });
+                                });
+                            }
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 设置记录
+                setTaskView: function (viewingTime) {
+                    axios.post('/wap/special/viewing', {
+                        special_id: specialId,
+                        task_id: taskId,
+                        viewing_time: viewingTime,
+                        percentage: Math.floor(viewingTime / vm.scrollHeight * 100),
+                        total: vm.scrollHeight
+                    });
+                },
+                // 返回
+                goBack: function () {
+                    window.location = "{:url('/m/view-course')}?id=" + specialId;
+                },
+                // 页面滚动
+                contentScroll: function () {
+                    if (!vm.isPay && vm.taskInfo.is_try) {
+                        return;
+                    }
+                    var scrollTop = this.$refs.content.scrollTop;
+                    if (this.isCenter && this.isEnd) {
+                        return;
+                    }
+                    if ((this.offsetHeight + scrollTop) * 2 >= this.scrollHeight && !this.isCenter) {
+                        this.setTaskView(this.offsetHeight + scrollTop);
+                        this.isCenter = true;
+                    }
+                    if (this.offsetHeight + scrollTop === this.scrollHeight && !this.isEnd) {
+                        this.setTaskView(this.offsetHeight + scrollTop);
+                        this.isEnd = true;
+                    }
+
+                }
+            }
+        });
+    });
+</script>
+{/block}

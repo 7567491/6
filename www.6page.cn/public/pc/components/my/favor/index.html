@@ -1,0 +1,105 @@
+<div class="my-favor">
+    <h1 class="my-title">我的收藏</h1>
+    <el-tabs v-model="active" class="my-favor" @tab-click="tabClick">
+        <el-tab-pane label="课程" name="0">
+            <div class="sec-wrapper">
+                <div class="sec-bd">
+                    <div v-for="item in list1" :key="item.id">
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" rel="nofollow" :href="(item.is_light ? router.single_course : router.view_course) + '?id=' + item.id">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" :style="{'background-image': 'url('+ replace_url(item.image) +')'}"></div>
+                                    <!--图文-->
+                                    <div v-if="item.type==1" title="图文课程" class="kc-course-type"><i class="el-icon-picture-outline"></i></div>
+                                    <!--音频课程-->
+                                    <div v-if="item.type==2" title="音频课程" class="kc-course-type"><i class="el-icon-headset"></i></div>
+                                    <!--视频课程-->
+                                    <div v-if="item.type==3" title="视频课程" class="kc-course-type"><i class="el-icon-video-play"></i></div>
+                                    <!--直播课程-->
+                                    <div v-if="item.type==4" title="直播课程" class="kc-course-type"><i class="el-icon-video-camera"></i></div>
+                                    <!--套餐课程-->
+                                    <div v-if="item.type==5" title="套餐课程" class="kc-course-type"><i class="el-icon-s-operation"></i></div>
+                                    <!--精简课程-->
+                                    <div v-if="item.type==6" title="精简课程" class="kc-course-type"><i class="el-icon-position"></i></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" :title="item.title">{{item.title}}</h3>
+                                    <div class="kc-course-card-labels">
+                                        <span class="kc-course-card-labels-item" v-for="label in item['label']">{{label}}</span>
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    <span class="kc-coursecard-price-icon" v-if="item.pay_type==1">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span v-if="item.pay_type==1">{{item.money}}</span>
+                                                    <span v-if="item.pay_type==0">免费</span>
+                                                    <span v-if="item.pay_type==2">加密</span>
+                                                </span>
+                                            </span>
+                                            <span class="kc-vip-price" v-if="item.member_money!=item.money">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{{item.member_money == 0 ?'免费' : '¥'+item.member_money }}</span>
+                                            </span>
+                                            <span class="kc-course-card-student-apply-num">{{item.browse_count}}人报名</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <el-empty v-if="list1.length==0 && loaded" image="/pc/images/empty4.png" description="暂无收藏～"></el-empty>
+            <div v-if="list1.length" class="pagination">
+                <el-pagination layout="prev, pager, next" :current-page.sync="page1" :page-size="limit" :total="count1"></el-pagination>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane label="虚拟资料" name="1">
+            <div class="sec-wrapper">
+                <div class="sec-bd">
+                    <div v-for="(item, index) in list2" :key="index">
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" rel="nofollow" :href="handleSelectDetils(item)">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" :style="{'background-image': 'url('+ replace_url(item.image) +')'}"></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name virtual" :title="item.title">{{item.title}}</h3>
+                                    <div class="kc-description">
+                                        {{item.description}}
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    <span class="kc-coursecard-price-icon" v-if="item.pay_type==1">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span v-if="item.pay_type==1">{{item.money}}</span>
+                                                    <span v-if="item.pay_type==0">免费</span>
+                                                    <span v-if="item.pay_type==2">加密</span>
+                                                </span>
+                                            </span>
+                                            <span class="kc-vip-price" v-if="item.member_money!=item.money">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{{item.member_money == 0 ?'免费' : '¥'+item.member_money }}</span>
+                                            </span>
+                                            <span class="kc-course-card-student-apply-num">{{item.ficti + item.sales}}次下载</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <el-empty v-if="list2.length==0" image="/pc/images/empty4.png" description="暂无收藏～"></el-empty>
+            <div v-if="list2.length" class="pagination course-list-pagination">
+                <el-pagination layout="prev, pager, next" :current-page.sync="page2" :page-size="limit" :total="count2"></el-pagination>
+            </div>
+        </el-tab-pane>
+    </el-tabs>
+</div>

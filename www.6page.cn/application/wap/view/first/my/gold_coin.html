@@ -1,0 +1,285 @@
+
+{extend name="public/container"}
+{block name="title"}{$gold_name}充值-{$Auth_site_name}{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="gold-coin">
+        <div class="header">
+            <div class="cont">
+                <div class="text">
+                    我的{{ gold_name }}
+                    <div class="num">{{ amount }}</div>
+                </div>
+                <a class="link" href="{:Url('my/gold_coin')}">明细</a>
+            </div>
+        </div>
+        <div class="main">
+            <!-- 数量选择 -->
+            <div class="wrap select">
+                <div class="head">数量选择</div>
+                <div class="cont">
+                    <div class="list">
+                        <label v-for="(item, index) in updateOptions" :key="index" class="item">
+                            <input v-model="coinChecked" :value="index" type="radio" name="num">
+                            <div class="item-cont">
+                                <div class="text">
+                                    <div :style="{ backgroundImage: 'url(' + gold_image + ')' }" class="num">{{ item.coin }}</div>
+                                    {{ item.money }}元
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <label :class="{ checked: coinChecked === options.length }" class="input">
+                        <div class="cell">
+                            <input v-model.number="moneyInput" :class="{ on: !moneyInput }" type="number" @focus="inputFocus" @blur="inputBlur">
+                            元
+                        </div>
+                        <div :style="{ backgroundImage: 'url(' + gold_image + ')' }" class="cell">{{ moneyToCoin }}</div>
+                    </label>
+                </div>
+            </div>
+            <div class="handle">
+                <button class="btn" type="button" @click="callPay">立即充值</button>
+            </div>
+            <payment
+                :payment="payHide"
+                :money="moneyPay"
+                :now_money="now_money"
+                :special_id="moneyPay"
+                :pay_type_num="payTypeNum"
+                :is-Wechat="isWechat"
+                :is-alipay="is_alipay"
+                :is-balance="is_yue"
+                :wxpay-h5="wxpayH5"
+                @change="changeVal"
+            ></payment>
+            <!-- <base-login :login-show="loginShow" :site-name="site_name" @login-close="logComplete"></base-login> -->
+        </div>
+    </div>
+{include file="public/store_menu"}
+</div>
+<script>
+    require(['vue', 'store', 'payment', 'components/base_login/index', 'quick'], function (Vue, store, payment, BaseLogin) {
+        var from = '{$from}';
+        var stream_name = '{$stream_name}';
+        var recharge_price_list = {$recharge_price_list};
+        var gold_info = {$gold_info};
+        var is_yue={$is_yue ? 'true' : 'false'};
+        var now_money={$now_money};
+        var is_alipay={$is_alipay ? 'true' : 'false'};
+        var wxpayH5={$is_h5_wechat_payment_switch ? 'true' : 'false'};
+        var callback_url = '{$callback_url}';
+        var app = new Vue({
+            el: '#app',
+            components: {
+                payment: payment,
+                'base-login': BaseLogin
+            },
+            data: {
+                // 我的金币
+                gold_name: gold_info.gold_name ? gold_info.gold_name : "金币",
+                gold_image: gold_info.gold_image,
+                amount: 0,
+                // 换算率
+                rate:gold_info.gold_rate ? gold_info.gold_rate : 10,
+                // 金币选项
+                options: recharge_price_list,
+                // 选中金额
+                coinChecked: 0,
+                // 输入金额
+                moneyInput: 0,
+                // 支付方式选中项
+                payChecked: 0,
+                // 支付弹窗隐藏
+                payHide: true,
+                // 登录弹窗隐藏
+                loginShow: false,
+                loginUrl: '',
+                siteName: '',
+                payTypeNum:30,//金币充值
+                is_alipay:is_alipay, //支付宝是否开启
+                is_yue:is_yue, //余额是否开启
+                now_money: now_money, //余额
+                urlStr: '',
+                from: from,
+                streamName: stream_name,
+                wxpayH5: wxpayH5
+            },
+            computed: {
+                updateOptions: function () {
+                    var that = this,
+                        Obj = {},
+                        Arr = [];
+                    that.options.map(function (value) {
+                        Obj.coin = value;
+                        Obj.money = (value / that.rate).toFixed(2);
+                        Arr.push(Obj);
+                        Obj = {};
+                    });
+                    return Arr;
+                },
+                // 金额换算金币
+                moneyToCoin: function () {
+                    return this.moneyInput * this.rate;
+                },
+                // 支付金额
+                moneyPay: function () {
+                    return this.coinChecked == -1 ? this.moneyInput : this.options[this.coinChecked] / this.rate;
+                },
+                // 是否微信
+                isWechat: function () {
+                    var agent = navigator.userAgent.toLowerCase();
+                    return agent.match(/MicroMessenger/i) == 'micromessenger';
+                }
+            },
+            created: function () {
+                this.my_user_gold_num();
+            },
+            methods: {
+                // 获取我的金币总数
+                my_user_gold_num: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'special',
+                        a: 'my_user_gold_num'
+                    }), function (res) {
+                        vm.amount = res.data.data.user_gold_num;
+                    });
+                },
+                getUrlStr: function (name) {
+                    var pattern = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i'),
+                        array = document.location.search.slice(1).match(pattern);
+                    if (array) {
+                        return decodeURI(array[2]);
+                    }
+                    return null;
+                },
+                inputFocus: function () {
+                    this.coinChecked = -1;
+                    if (this.moneyInput) {
+                        this.moneyInput = ''
+                    }
+                },
+                inputBlur: function () {
+                    if (!this.moneyInput) {
+                        this.moneyInput = 0;
+                        this.coinChecked = 0;
+                    }
+                },
+                // 支付弹窗调起
+                callPay: function () {
+                    var vm = this;
+                    if (this.coinChecked == -1) {
+                        if (this.moneyInput <= 0) {
+                            $h.pushMsg('请输入正确值');
+                            return;
+                        }
+                    }
+                    store.baseGet($h.U({
+                        c: 'index',
+                        a: 'user_login'
+                    }), function () {
+                        vm.payHide = false;
+                    }, function () {
+                        vm.loginShow = true;
+                    });
+                },
+                //关闭支付
+                payClose:function(value){
+                    this.payHide=value;
+                },
+                closeLogin: function (params) {
+                    if (typeof params !== 'object') {
+                        return;
+                    }
+                    switch (params.action) {
+                        case 'loginClose':
+                            this.loginShow = false;
+                            break;
+                        case 'logComplete':
+                            this.loginShow = false;
+                            this.payHide = false;
+                            break;
+                    }
+                },
+                //所有插件回调处理事件
+                changeVal:function (opt){
+                    if(typeof opt !='object') opt={};
+                    var action=opt.action || '';
+                    var value=opt.value || '';
+                    this[action] && this[action](value);
+                },
+                pay_order: function (data) {
+                    this.orderId = data.data.result.orderId || '';
+                    switch (data.data.status) {
+                        case "PAY_ERROR": case 'ORDER_EXIST': case 'ORDER_ERROR':
+                            this.extendOrder(data.msg);
+                            break;
+                        case 'WECHAT_PAY':
+                            this.wechatPay(data.data.result.jsConfig);
+                            break;
+                        case 'WECHAT_H5_PAY':
+                            this.payHide=true;
+                            var callbackUrl = callback_url + '?type=4&id=0';
+                            var mwebUrl = data.data.result.jsConfig.mweb_url + '&redirect_url=' + encodeURIComponent(callbackUrl);
+                            window.location.href = mwebUrl;
+                            break;
+                        case 'SUCCESS':
+                            this.successOrder(data.data);
+                            break;
+                        case 'ZHIFUBAO_PAY':
+                            window.location.href = $h.U({m:'wap',c:'alipay', a: 'index', q: { info: data.data.result, params: 'recharge' } });
+                            break;
+                    }
+                },
+                wechatPay:function(config){
+                    var that = this;
+                    mapleWx($jssdk(),function(){
+                        this.chooseWXPay(config,function(){
+                            that.successOrder();
+                        },{
+                            fail:that.extendOrder,
+                            cancel:that.extendOrder
+                        });
+                    });
+                },
+                successOrder: function (data) {
+                    var that = this, msg, result;
+                    if (data) {
+                        msg = data.msg;
+                        result = data.result;
+                        that.payHide = true;
+                        $h.showMsg({
+                            title: msg ? msg : '支付成功',
+                            icon: 'success',
+                            success: function () {
+                                if (that.from == 'live') {
+                                    window.location.href =  $h.U({s: true, c: 'live', a: 'index', q: { stream_name: that.streamName, record_id: that.RecordId } });
+                                } else {
+                                    that.my_user_gold_num();
+                                }
+                            }
+                        });
+                    } else {
+                        window.location.reload();
+                    }
+                },
+                extendOrder:function(msg){
+                    if (typeof msg === 'object') {
+                        if (msg.errMsg === 'chooseWXPay:cancel') {
+                            msg = '微信支付取消';
+                        } else {
+                            msg = '支付失败';
+                        }
+                    } else {
+                        msg = '支付失败';
+                    }
+                    $h.pushMsg(msg, function () {
+                        window.location=$h.U({s: true, c:'special',a:'recharge_index'});
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

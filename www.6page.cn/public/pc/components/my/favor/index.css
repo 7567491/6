@@ -1,0 +1,7 @@
+.sec-wrapper{
+    padding-top: 0;
+    width: 100%;
+}
+.sec-wrapper .sec-bd .kc-course-card{
+    width: 290px;
+}

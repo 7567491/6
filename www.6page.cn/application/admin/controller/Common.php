@@ -1,0 +1,25 @@
+<?php
+
+
+namespace app\admin\controller;
+
+
+use service\UtilService;
+
+class Common extends AuthController
+{
+    /**
+     * 删除原来图片
+     * @param $url
+     */
+    public function rmPublicResource($url)
+    {
+        $res = UtilService::rmPublicResource($url);
+        if ($res->status)
+            return $this->successful('删除成功!');
+        else
+            return $this->failed($res->msg);
+    }
+
+
+}

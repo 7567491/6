@@ -1,0 +1,322 @@
+{extend name="public/container"}
+{block name="title"}确认付款-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+
+<div class="wy-exam-page">
+    <div class="payment-title">确认付款信息</div>
+    <div class="payment-info">
+        <div class="payment-info-item goods-title"><span>你要购买：</span>{{ goods.title }}</div>
+        <div class="payment-info-item"><span>应付金额：</span><em>{{ goods.is_member ? goods.member_money : goods.money }}</em>元</div>
+    </div>
+    <div class="payment-method">
+        <div class="payment-title">支付方式</div>
+        <div class="payment-type-list">
+            <el-radio class="payment-selector" v-model="pay_type" label="yue" border v-if="is_yue" class="yue">
+                <div class="yue-title">
+                    余额支付
+                </div>
+                <div class="yue-meta">余额：¥{{ now_money }}</div>
+            </el-radio>
+            <el-radio class="payment-selector" v-model="pay_type" label="weixin" border v-if="is_wechat">
+                <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/order-wechat.png" />
+            </el-radio>
+            <el-radio class="payment-selector" v-model="pay_type" label="zhifubao" border v-if="is_alipay">
+                <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/order-alipay.png" />
+            </el-radio>
+        </div>
+        <div class="payment-go">
+            <el-button type="primary" v-show="isReset" :disabled="!pay_type" @click="create_order">立即支付</el-button>
+            <el-button v-show="isReset" :disabled="!pay_type" @click="cancel">取消</el-button>
+            <div class="payment-qrcode" v-show="!isReset">
+                <div class="pay-tip">请用{{ pay_type == 'weixin' ? '微信' : '支付宝' }}扫码支付</div>
+                <div ref="qrcode" class="qrcode"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<el-dialog :visible.sync="dialogVisible" :close-on-click-modal="false" :show-close="false" width="370px" center title="支付成功">
+    <div class="pay-success">
+        <div class="pay-success-icon">
+            <i class="el-icon-circle-check"></i>
+        </div>
+        <div class="pay-success-tips">
+            订单支付成功，点击确认跳转
+        </div>
+    </div>
+    <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="payAfterClick">确认</el-button>
+    </span>
+</el-dialog>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData"
+            @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_header/index',
+        'components/base_footer/index',
+        'mixins/base',
+        'api/home',
+        'api/auth',
+        'scripts/util',
+        'qrcode'
+    ], function (Vue, ELEMENT, BaseHeader, BaseFooter, baseMixin, homeApi, authApi, util) {
+        Vue.use(ELEMENT);
+        var is_test = {$is_test};
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-header': BaseHeader,
+                'base-footer': BaseFooter
+            },
+            mixins: [baseMixin],
+            data: {
+                type: 0,
+                goods: {
+                    title: '---',
+                    money: '0.00'
+                },
+                pay_type: 'yue',
+                is_yue: {$is_yue},
+                is_wechat: {$is_wechat},
+                is_alipay: {$is_alipay},
+                now_money: {$now_money},
+                dialogVisible: false,
+                isReset: true,
+                count: 0,
+                link_pay_uid: 0
+            },
+            watch: {
+                pay_type: function () {
+                    clearInterval(this.timer)
+                    this.isReset = true;
+                }
+            },
+            created: function () {
+                this.id = util.getParmas('id');
+                this.type = util.getParmas('type');
+                this.link_pay_uid = util.getParmas('link_pay_uid');
+                this.pay_data();
+                if (!this.is_yue) {
+                    if (this.is_wechat) {
+                        this.pay_type = 'weixin';
+                    } else {
+                        if (this.is_alipay) {
+                            this.pay_type = 'zhifubao';
+                        } else {
+                            this.pay_type = '';
+                        }
+                    }
+                }
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    vm.qrcode = new QRCode(vm.$refs.qrcode, 'res.data.result.jsConfig'); 
+                })
+            },
+            methods: {
+                // 展示数据
+                pay_data: function () {
+                    homeApi.pay_data({
+                        id: this.id,
+                        type: this.type
+                    }).then(function (res) {
+                        vm.goods = res.data;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 去支付
+                create_order: function () {
+                    if (!this.pay_type) {
+                        return;
+                    }
+                    var pay_type_num
+                    if (this.type == 1) {
+                        pay_type_num = 2
+                    } else if (this.type == 0) {
+                        pay_type_num = 70
+                    } else {
+                        pay_type_num = 60
+                    }
+
+                    if (this.pay_type === 'yue') {
+                        this.$confirm('确定消耗'+ (this.goods.is_member ? this.goods.member_money : this.goods.money) +'元余额进行购买吗?', '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            authApi.create_order({
+                                link_pay_uid: this.link_pay_uid,
+                                special_id: this.id,
+                                pay_type_num: pay_type_num,
+                                payType: this.pay_type
+                            }).then(function (res) {
+                                switch (res.data.status) {
+                                    case "PAY_ERROR":
+                                    case 'ORDER_EXIST':
+                                    case 'ORDER_ERROR':
+                                        vm.$message.error(res.msg);
+                                        break;
+                                    case 'WECHAT_PAY':
+                                        vm.isReset = false;
+                                        if (vm.qrcode) {
+                                            vm.qrcode.makeCode(res.data.result.jsConfig);
+                                        } else {
+                                            vm.$nextTick(function () {
+                                                vm.qrcode = new QRCode(vm.$refs.qrcode, res.data.result.jsConfig);
+                                            });
+                                        }
+                                        vm.testing_order_state(res.data.result.orderId);
+                                        break;
+                                    case 'ZHIFUBAO_PAY':
+                                        vm.isReset = false;
+                                        if (vm.qrcode) {
+                                            vm.qrcode.makeCode(res.data.result.jsConfig);
+                                        } else {
+                                            vm.$nextTick(function () {
+                                                vm.qrcode = new QRCode(vm.$refs.qrcode, res.data.result.jsConfig);
+                                            });
+                                        }
+                                        vm.testing_order_state(res.data.result.orderId);
+                                        break;
+                                    case 'SUCCESS':
+                                        vm.$message.success(res.msg);
+                                        if (vm.pay_type === 'yue') {
+                                            vm.dialogVisible = true;
+                                        }
+                                        break;
+                                }
+                            }).catch(function (err) {
+                                vm.$message.error(err.msg);
+                            });
+                        }).catch(() => {
+
+                        });
+                    } else {
+                        authApi.create_order({
+                            link_pay_uid: this.link_pay_uid,
+                            special_id: this.id,
+                            pay_type_num: pay_type_num,
+                            payType: this.pay_type
+                        }).then(function (res) {
+                            switch (res.data.status) {
+                                case "PAY_ERROR":
+                                case 'ORDER_EXIST':
+                                case 'ORDER_ERROR':
+                                    vm.$message.error(res.msg);
+                                    break;
+                                case 'WECHAT_PAY':
+                                    vm.isReset = false;
+                                    if (vm.qrcode) {
+                                        vm.qrcode.makeCode(res.data.result.jsConfig);
+                                    } else {
+                                        vm.$nextTick(function () {
+                                            vm.qrcode = new QRCode(vm.$refs.qrcode, res.data.result.jsConfig);
+                                        });
+                                    }
+                                    vm.testing_order_state(res.data.result.orderId);
+                                    break;
+                                case 'ZHIFUBAO_PAY':
+                                    vm.isReset = false;
+                                    if (vm.qrcode) {
+                                        vm.qrcode.makeCode(res.data.result.jsConfig);
+                                    } else {
+                                        vm.$nextTick(function () {
+                                            vm.qrcode = new QRCode(vm.$refs.qrcode, res.data.result.jsConfig);
+                                        });
+                                    }
+                                    vm.testing_order_state(res.data.result.orderId);
+                                    break;
+                                case 'SUCCESS':
+                                    vm.$message.success(res.msg);
+                                    if (vm.pay_type === 'yue') {
+                                        vm.dialogVisible = true;
+                                    }
+                                    break;
+                            }
+                        }).catch(function (err) {
+                            vm.$message.error(err.msg);
+                        });
+                    }
+                },
+                payAfterClick: function () {
+                    this.dialogVisible = false;
+                    if (this.type == 1) {
+                        if (this.goods.is_light) {
+                            window.location.href = this.router.single_course + '?id=' + this.id;
+                        } else {
+                            window.location.href = this.router.view_course + '?id=' + this.id;
+                        }
+                    } else if(this.type == 0) {
+                        window.location.href = this.handleVirtualUrl(this.id);
+                    } else if(this.type == 2) {
+                        if (is_test) {
+                            window.location.href = this.router.test + '?id=' + this.id;
+                        } else {
+                            window.location.href = this.router.exam + '?id=' + this.id;
+                        }
+                    }
+                },
+                cancel: function () {
+                    if (this.type == 1) {
+                        if (this.goods.is_light) {
+                            window.location.href = this.router.single_course + '?id=' + this.id;
+                        } else {
+                            window.location.href = this.handleVirtualUrl(this.id);
+                        }
+                    } else if(this.type == 0) {
+                        window.location.href = this.router.view_virtual + '/' + this.id;
+                    } else if(this.type == 2) {
+                        window.location.href = this.router.exam + '?id=' + this.id;
+                    }
+                },
+                handleVirtualUrl: function (id) {
+                    // 用正则去掉字符串后面的.html
+                    return this.router.view_virtual.replace(/\.html$/, '') + '/' + this.id + '.html';
+                },
+                // 扫码回调
+                testing_order_state: function (orderId) {
+                    if (vm.timer) {
+                        return;
+                    }
+                    this.timer = setInterval(function () {
+                        vm.count++;
+                        authApi.testing_order_state({
+                            order_id: orderId,
+                            type: vm.type == 1 ? 0 : 1
+                        }).then(function (res) {
+                            if (res.data == 1) {
+                                clearInterval(vm.timer);
+                                vm.count = 0;
+                                vm.timer = null;
+                                vm.dialogVisible = true;
+                            }
+                        }).catch(function (err) {
+                            console.error(err.msg);
+                        });
+                        if (vm.count == 12) {
+                            clearInterval(vm.timer);
+                            vm.count = 0;
+                            vm.timer = null;
+                        }
+                    }, 5000);
+                }
+            }
+        });
+    });
+</script>
+{/block}

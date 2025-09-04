@@ -1,0 +1,501 @@
+
+{extend name="public/container"}
+{block name="title"}{$userInfo.nickname}-个人资料-{$Auth_site_name}{/block}
+{block name="head_top"}
+<script src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/md5.js"></script>
+<style>
+    body{
+        background-color: #f5f5f5;
+    }
+
+    .user-info .avatar {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        padding: .3rem;
+        background-color: #fff;
+    }
+
+    .user-info .avatar .name {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        font-weight: 500;
+        font-size: .3rem;
+        color: #333;
+    }
+
+    .user-info .avatar .image {
+        width: .9rem;
+        height: .9rem;
+        border-radius: 50%;
+        overflow: hidden;
+    }
+
+    .user-info .avatar .img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-info .avatar .iconfont {
+        margin-left: .3rem;
+        font-size: .24rem;
+        color: #999;
+    }
+
+    .user-info .avatar .input {
+        display: none;
+    }
+
+    .user-info .list {
+        margin-top: .3rem;
+        background-color: #fff;
+    }
+
+    .user-info .list .item {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        height: .98rem;
+        padding-right: .3rem;
+        padding-left: .3rem;
+    }
+
+    .user-info .list .item~.item{
+        border-top: 1px solid #f5f5f5;
+    }
+
+    .user-info .list .item .name {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        font-weight: 500;
+        font-size: .3rem;
+        color: #333;
+    }
+
+    .user-info .list .item .value {
+        font-size: .3rem;
+        color: #666;
+    }
+
+    .user-info .list .item .iconfont{
+        margin-left: .3rem;
+        font-size: .24rem;
+        color: #999;
+    }
+
+    .user-info .list .item .input {
+        font-family: inherit;
+        text-align: right;
+    }
+
+    .user-info .group{
+        padding: .3rem;
+        margin-top: .5rem;
+    }
+
+    .user-info .group .button {
+        display: block;
+        width: 100%;
+        height: .86rem;
+        border-radius: .43rem;
+        background-color: #539dfd;
+        font-weight: 500;
+        font-size: .3rem;
+        color: #fff;
+    }
+
+    .user-info .group .link {
+        display: block;
+        width: 100%;
+        height: .86rem;
+        border: 1px solid #ccc;
+        border-radius: .43rem;
+        margin-top: .3rem;
+        font-weight: 500;
+        font-size: .3rem;
+        line-height: .82rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .user-info .list .item.password {
+        justify-content: space-between;
+    }
+
+    .popup {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 60;
+        border-radius: .2rem .2rem 0 0;
+        background: #FFFFFF;
+        transform: translateY(100%);
+        transition: 0.3s;
+    }
+
+    .popup.on {
+        transform: translateY(0);
+    }
+
+    .popup > a {
+        position: absolute;
+        top: .3rem;
+        right: .3rem;
+        z-index: 2;
+    }
+
+    .popup a .iconfont {
+        font-size: .27rem;
+        color: #8A8A8A;
+    }
+
+    .popup > div:nth-child(2) {
+        padding: .4rem 0 .34rem;
+        font-weight: bold;
+        font-size: .36rem;
+        line-height: .5rem;
+        text-align: center;
+        color: #282828;
+    }
+
+    .popup > div:nth-child(3) {
+        padding: 0 .3rem .3rem;
+    }
+
+    .popup .item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        height: 1.19rem;
+        padding: 0 .15rem;
+    }
+
+    .popup .item::after {
+        content: "";
+        position: absolute;
+        right: .15rem;
+        bottom: 0;
+        left: .15rem;
+        z-index: 2;
+        height: 1px;
+        border-bottom: 1px solid #CCCCCC;
+    }
+
+    .popup .item .iconfont {
+        font-size: .4rem;
+    }
+
+    .popup .item input {
+        flex: 1;
+        min-width: 0;
+        margin-left: .25rem;
+    }
+
+    .popup .item:nth-child(2) {
+        padding-right: 0;
+    }
+
+    .popup .item:nth-child(2) label {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .popup .item button {
+        width: 2rem;
+        font-size: .26rem;
+        color: #2C8EFF;
+    }
+
+    .popup > div > button {
+        width: 100%;
+        height: .86rem;
+        border-radius: .43rem;
+        margin-top: .5rem;
+        background: #2C8EFF;
+        font-size: .3rem;
+        color: #FFFFFF;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="user-info">
+        <label class="avatar">
+            <div class="name">头像</div>
+            <div class="image">
+                <img class="img" :src="fx_cdn_img(userInfo.avatar)">
+            </div>
+            <div class="iconfont iconxiangyou"></div>
+            <input ref="avatar" class="input" type="file" accept="image/*">
+        </label>
+        <div class="list">
+            <label class="item">
+                <span class="name">ID</span>
+                <input v-model="userInfo.uid" class="value input" type="text" disabled>
+            </label>
+            <label class="item">
+                <span class="name">昵称</span>
+                <input v-model="userInfo.nickname" class="value input" type="text">
+            </label>
+            <label class="item">
+                <span class="name">真实姓名</span>
+                <input v-model="userInfo.full_name" class="value input" type="text">
+            </label>
+            <template v-if="login_types != 2">
+                <a class="item" href="{:Url('save_phone')}">
+                    <span class="name">手机号</span>
+                    <span class="value">{{ userInfo.phone }}</span>
+                    <span class="iconfont iconxiangyou"></span>
+                </a>
+                <div v-if="userInfo.phone" class="item password" @click="popupShow = true">
+                    <div>密码</div>
+                    <div>******</div>
+                </div>
+            </template>
+        </div>
+        <div class="group">
+            <button class="button" type="button" @click="save_user_info">保存</button>
+            <a class="link" href="{:url('/m/my')}">返回</a>
+        </div>
+    </div>
+    <div :class="{ mask: popupShow }" @click="popupShow = false"></div>
+    <div :class="{ on: popupShow }" class="popup">
+        <a href="javascript:" @click="popupShow = false">
+            <i class="iconfont iconguanbi"></i>
+        </a>
+        <div>修改密码</div>
+        <div>
+            <label class="item">
+                <i class="iconfont iconshouji"></i>
+                <input :value="userInfo.phone" type="text" readonly>
+            </label>
+            <div class="item">
+                <label>
+                    <i class="iconfont iconyanzhengma"></i>
+                    <input v-model.trim="code" type="text" placeholder="请填写验证码">
+                </label>
+                <button id="captcha-btn" :disabled="count >= 0" type="button" @click="getCode">{{ count < 0 ? '获取验证码' : '重新获取(' + count + 's)' }}</button>
+            </div>
+            <label class="item">
+                <i class="iconfont iconmima"></i>
+                <input v-model.trim="pwd" type="password" placeholder="请填写8-16位字母加数字组合密码">
+            </label>
+            <button type="button" @click="submitPassword">确认</button>
+        </div>
+    </div>
+    <div id="slide-captcha" class="slide-captcha"></div>
+{include file="public/store_menu"}
+</div>
+{/block}
+{block name='foot'}
+<script>
+    var userInfo = {:json_encode($userInfo)}, isWechat = {$isWechat? 'true': 'false'};
+    require(['vue', 'helper', 'store', 'layer', '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/quick.js'], function (Vue, $h, app) {
+        new Vue({
+            el: '#app',
+            data: {
+                userInfo: userInfo,
+                popupShow: false,
+                count: -1,
+                COUNT_TIME: 60,
+                code: '',
+                pwd: '',
+                // login_types存在container.html中
+                login_types: window.login_types,
+            },
+            watch: {
+                'userInfo.nickname': function (n) {
+                    document.title = n + ' - 个人资料';
+                },
+                popupShow: function (val) {
+                    if (val) {
+                        var vm = this
+                        if (typeof slide_captcha === 'undefined' || !slide_captcha) {
+                            return
+                        }
+                        setTimeout(function () {
+                            // // 初始化验证码  弹出式
+                            $('#slide-captcha').slideVerify({
+                                baseUrl: slide_captcha_api,  //服务器请求地址, 默认地址为安吉服务器;
+                                mode: 'pop',     //展示模式
+                                containerId: 'captcha-btn',//pop模式 必填 被点击之后出现行为验证码的元素id
+                                imgSize : {       //图片的大小对象,有默认值{ width: '310px',height: '155px'},可省略
+                                    width: '300px',
+                                    height: '150px',
+                                },
+                                barSize:{          //下方滑块的大小对象,有默认值{ width: '310px',height: '50px'},可省略
+                                    width: '200px',
+                                    height: '30px',
+                                },
+                                beforeCheck:function(){
+                                    if (!vm.userInfo.phone) {
+                                        $h.pushMsg('请输入手机号');
+                                        return;
+                                    }
+                                    if (!/^1[3456789]\d{9}$/.test(vm.userInfo.phone)) {
+                                        $h.pushMsg('手机号错误');
+                                        return;
+                                    }
+                                    return true
+                                },
+                                ready : function() {},
+                                success : function(params) {
+                                    vm.count = vm.COUNT_TIME;
+                                    vm.timer = setInterval(function () {
+                                        vm.count--;
+                                        if (vm.count < 0) {
+                                            clearInterval(vm.timer);
+                                            vm.timer = null;
+                                        }
+                                    }, 1000);
+                                    app.basePost($h.U({
+                                        c: 'auth_api',
+                                        a: 'code',
+                                    }), {
+                                        phone: vm.userInfo.phone,
+                                        token: params.data.token,
+                                        pointJson: params.data.pointJson,
+                                        captchaType: 'blockPuzzle'
+                                    }, function (res) {
+                                        $h.pushMsg(res.data.msg);
+                                    }, function (err) {
+                                        $h.pushMsg(typeof err === "string" ? err : err.data.msg, function () {
+                                            clearInterval(vm.timer);
+                                            vm.timer = null;
+                                            vm.count = -1;
+                                        });
+                                    });
+                                },
+                                error : function() {}        //失败的回调
+                            });
+                        }, 0)
+                    }
+                }
+            },
+            mounted: function () {
+                var that = this;
+                $(this.$refs.avatar).change(function (e) {
+                    var formdata = new FormData();
+                    if (e.target.files[0]) {
+                        formdata.append('file', e.target.files[0]);
+                        app.basePost($h.U({ c: 'index', a: 'upload' }), formdata, function (res) {
+                            that.userInfo.avatar = res.data.data.url;
+                        })
+                    }
+                })
+            },
+            methods: {
+                upload: function () {
+                    var that = this;
+                    if (!isWechat) {
+                        return;
+                    }
+                    mapleWx($jssdk(), function () {
+                        app.wechatUploadImg(this, 1, function (res) {
+                            that.userInfo.avatar = res[0];
+                        });
+                    });
+                },
+                save_user_info: function () {
+                    var that = this;
+                    app.basePost($h.U({ c: 'my', a: 'save_user_info' }), {
+                        avatar: that.userInfo.avatar,
+                        nickname: that.userInfo.nickname,
+                        full_name: that.userInfo.full_name
+                    }, function (res) {
+                        $h.pushMsgOnce(res.data.msg)
+                    })
+                },
+                getCode: function () {
+                    if (typeof slide_captcha !== 'undefined' && slide_captcha) {
+                        return
+                    }
+                    var vm = this;
+                    vm.count = vm.COUNT_TIME;
+                    vm.timer = setInterval(function () {
+                        vm.count--;
+                        if (vm.count < 0) {
+                            clearInterval(vm.timer);
+                            vm.timer = null;
+                        }
+                    }, 1000);
+                    app.basePost($h.U({
+                        c: 'auth_api',
+                        a: 'code',
+                    }), {
+                        phone: vm.userInfo.phone
+                    }, function (res) {
+                        $h.pushMsg(res.data.msg);
+                    }, function (err) {
+                        $h.pushMsg(err.data.msg, function () {
+                            clearInterval(vm.timer);
+                            vm.timer = null;
+                            vm.count = -1;
+                        });
+                    });
+                },
+                // 点击密码弹窗确认按钮
+                submitPassword: function () {
+                    var vm = this;
+                    if (!vm.code) {
+                        $h.pushMsg('请填写验证码');
+                        return;
+                    }
+                    if (!vm.pwd) {
+                        $h.pushMsg('请填写新密码');
+                        return;
+                    }
+                    if (!/^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{8,16}$/.test(vm.pwd)) {
+                        $h.pushMsg('请填写8-16位字母加数字组合密码');
+                        return;
+                    }
+                    app.basePost($h.U({
+                        c: 'login',
+                        a: 'register'
+                    }), {
+                        account: vm.userInfo.phone,
+                        pwd: hex_md5(vm.pwd),
+                        code: vm.code,
+                        type: 2
+                    }, function () {
+                        vm.popupShow = false;
+                        vm.code = '';
+                        vm.pwd = '';
+                        layer.alert('密码修改成功！<br>请确定去个人中心重新登陆。', {
+                            title: false,
+                            closeBtn: false
+                        }, function (index) {
+                            app.baseGet($h.U({
+                                c: 'my',
+                                a: 'logout'
+                            }), function () {
+                                window.location.replace($h.U({
+                                    s: true,
+                                    c: 'my',
+                                    a: 'index'
+                                }));
+                            });
+                            layer.close(index);
+                        });
+                    }, function () {
+                        vm.count = -1;
+                    });
+                }
+            }
+        });
+    })
+</script>
+{/block}

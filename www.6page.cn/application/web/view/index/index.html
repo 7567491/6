@@ -1,0 +1,628 @@
+{extend name="public/container"}
+{block name="app"}
+{include file='public/top' /}
+<div class="main">
+    <div class="bk" :style="{'background-image': homeTopBg}"></div>
+    <div class="banner-box">
+        <div class="g-banner">
+            {foreach $public_data.cate as $key=>$cate }
+            <div class="submenu" @mouseout="hideCateSub" @mouseover="keepCateSub" data-index="{$key}">
+                <div class="inner-box">
+                    <h2 class="type">{$cate.name}</h2>
+                    <div class="tag clearfix">
+                    </div>
+                    <div class="lore">
+                        <span class="title">分类：</span>
+                        <p class="lores clearfix">
+                            {volist name="cate.children" id="subCate"}
+                            <a target="_blank" href="{:url('/course')}?cate_id={$cate.id}&subject_id={$subCate.id}">{$subCate.name}</a>
+                            {/volist}
+                        </p>
+                    </div>
+                </div>
+                <div class="recomment clearfix">
+                    {volist name="cate.list" id="recomment"}
+                    <a href="{$recomment.is_light?url('/single-course'):url('/view-course')}?id={$recomment.id}" target="_blank" class="recomment-item">
+                        <div class="img" style="background-image: url({:str_replace('\\\\','/',get_image_src($recomment.image))})"></div>
+                        <div class="details">
+                            <div class="title-box">
+                                <p class="title">
+                                    <span class="text">{$recomment.title}</span>
+                                </p>
+                            </div>
+                            <div class="bottom">
+                                <span class="discount-name">优惠价</span>
+                                <span class="price">{$recomment.money == 0 ? '免费' : '¥' . $recomment.money}</span> ·
+                                <span class="difficulty">学习人数</span>:
+                                <span class="num"><i class="imv2-set-sns"></i> {$recomment.browse_count}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {/volist}
+                </div>
+            </div>
+            {/foreach}
+            <div class="menuContent" @mouseout="hideCateSub">
+                {foreach $public_data.cate as $key=>$cate }
+                <div class="item" data-index="{$key}" @mouseover="showCateSub">
+                    <span class="title">{$cate.name}：</span>
+                    <span class="sub-title">
+                        {volist name="cate.children" id="subCate" length="2"}
+                            <b>{$subCate.name}</b>
+                        {/volist}
+                    </span>
+                    <i class="el-icon-caret-right"></i>
+                </div>
+                {/foreach}
+            </div>
+            <div class="g-banner-content">
+                <div class="g-banner-box">
+                    <el-carousel height="382px" @change="bannerChanged" interval="5000">
+                        {foreach $home_data.pc_banner_list as $key=>$banner }
+                        <el-carousel-item>
+                            <a class="g-banner-item" href="{$banner.url}" title="{$banner.title}" target="_blank">
+                                <div class="g-banner-item-bg" style="background-image: url({:str_replace('\\\\','/',get_image_src($banner.pic))})"></div>
+                            </a>
+                        </el-carousel-item>
+                        {/foreach}
+                    </el-carousel>
+                </div>
+            </div>
+        </div>
+        <div class="index-ad">
+            {foreach $home_data.pc_home_ad as $key=>$ad }
+            <a href="{$ad.url}" title="{$ad.title}" class="index-ad-item" style="background-image: url({:str_replace('\\\\','/',get_image_src($ad.banner))})"></a>
+            {/foreach}
+        </div>
+    </div>
+    {foreach $pc_recommend_list['recommend'] as $key=>$recommend}
+    {eq name="recommend.type" value="0"}
+    <!--普通课程模块-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>{$recommend.title}</h3>
+                <p>{$recommend.explain}</p>
+                <a href="{:url('/course')}" class="sec-hd-refresh">更多 <i class="el-icon-d-arrow-right"></i></a>
+            </div>
+            <div class="sec-bd">
+                {foreach $recommend['list'] as $key=>$item}
+                <div>
+                    <section class="course-card-expo-wrapper">
+                        <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                            <div class="kc-course-card-cover">
+                                <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                            </div>
+                            <div class="kc-course-card-content">
+                                <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                <div class="kc-course-card-labels">
+                                    {foreach $item['label'] as $label_key=>$label}
+                                    <span class="kc-course-card-labels-item">{$label}</span>
+                                    {/foreach}
+                                </div>
+                                <div class="kc-course-card-footer normal">
+                                    <div class="kc-coursecard-footer-left">
+                                        <span class="kc-course-card-price">
+                                            <span class="kc-coursecard-price">
+                                                {eq name="item.pay_type" value="1"}
+                                                <span class="kc-coursecard-price-icon">
+                                                    <span class="coursedot">¥</span>
+                                                </span>
+                                                <span>{$item.money}</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="0"}
+                                                <span>免费</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="2"}
+                                                <span>加密</span>
+                                                {/eq}
+                                            </span>
+                                        </span>
+                                        {neq name="item.member_money" value="$item.money"}
+                                        <span class="kc-vip-price">
+                                            <span class="kc-vip-label">VIP</span>
+                                            <span class="kc-vip-num">{$item.member_pay_type ? '¥'.$item.member_money : '免费'}</span>
+                                        </span>
+                                        {/neq}
+                                        <span class="kc-course-card-student-apply-num">{$item.browse_count}人报名</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </section>
+                </div>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {eq name="recommend.type" value="1"}
+    <!--直播模块-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>{$recommend.title}</h3>
+                <p>{$recommend.explain}</p>
+                <a href="{:url('/live')}" class="sec-hd-refresh">更多 <i class="el-icon-d-arrow-right"></i></a>
+            </div>
+            <div class="sec-bd">
+                {foreach $recommend['list'] as $key=>$item}
+                <div>
+                    <section class="course-card-expo-wrapper">
+                        <a class="kc-course-card" href="{:url('/view-course')}?id={$item.id}">
+                            <div class="kc-course-card-cover">
+                                <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                {eq name="item.status" value="1"}
+                                <div class="kc-course-card-cover-live ing">
+                                    <span class="kc-course-card-cover-live-icon"></span>
+                                    <span class="kc-course-card-cover-live-text">直播中</span>
+                                </div>
+                                {/eq}
+                                {eq name="item.status" value="2"}
+                                <div class="kc-course-card-cover-live done">
+                                    <span class="kc-course-card-cover-live-icon"></span>
+                                    <span class="kc-course-card-cover-live-text">回放</span>
+                                </div>
+                                {/eq}
+                                {eq name="item.status" value="3"}
+                                <div class="kc-course-card-cover-live waiting">
+                                    <span class="kc-course-card-cover-live-icon"></span>
+                                    <span class="kc-course-card-cover-live-text">未开始</span>
+                                </div>
+                                {/eq}
+                                {eq name="item.status" value="4"}
+                                <div class="kc-course-card-cover-live done">
+                                    <span class="kc-course-card-cover-live-icon"></span>
+                                    <span class="kc-course-card-cover-live-text">已结束</span>
+                                </div>
+                                {/eq}
+                            </div>
+                            <div class="kc-course-card-content">
+                                <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                <div class="kc-course-card-footer">
+                                    <div class="kc-coursecard-footer-left">
+                                        <div class="kc-coursecard-addition">
+                                        <span class="ke-icon kc-icon" style="color: rgb(102, 114, 128); font-size: 16px;">
+                                            <svg class="icon-fire-fill-color_svg__colored" width="1em" height="1em" viewBox="0 0 9 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.55.332C5.538.124 5.383-.043 5.198.01 4.015.349 1.913 2.237 3.114 4.849c.239.518.197.917.002 1.129-.32.347-.934.374-1.436-.961-.074-.196-.277-.306-.444-.198C.473 5.313 0 6.381 0 7.483 0 10.127 2.076 12 4.5 12 6.923 12 9 10.118 9 7.483c0-1.609-.78-2.453-1.6-3.34C6.548 3.22 5.653 2.251 5.55.331Z" fill="#C4C4C4"></path><path d="M5.55.332C5.538.124 5.383-.043 5.198.01 4.015.349 1.913 2.237 3.114 4.849c.239.518.197.917.002 1.129-.32.347-.934.374-1.436-.961-.074-.196-.277-.306-.444-.198C.473 5.313 0 6.381 0 7.483 0 10.127 2.076 12 4.5 12 6.923 12 9 10.118 9 7.483c0-1.609-.78-2.453-1.6-3.34C6.548 3.22 5.653 2.251 5.55.331Z" fill="url(#icon-fire-fill-color_svg__a)"></path><defs><linearGradient id="icon-fire-fill-color_svg__a" x1="0.5" y1="2" x2="6.156" y2="7.1" gradientUnits="userSpaceOnUse"><stop stop-color="#FF7A38"></stop><stop offset="1" stop-color="#F23F4E"></stop></linearGradient></defs></svg>
+                                        </span>最近在学 {$item.browse_count}人
+                                        </div>
+                                        <div class="kc-course-card-live-btn">
+                                            <button type="button" class="kc-coursecard-applybtn">马上看</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </section>
+                </div>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {eq name="recommend.type" value="2"}
+    <!--讲师模块-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>{$recommend.title}</h3>
+                <p>{$recommend.explain}</p>
+                <a href="{:url('/teachers')}" class="sec-hd-refresh">更多 <i class="el-icon-d-arrow-right"></i></a>
+            </div>
+            <div class="sec-bd">
+                {foreach $recommend['list'] as $key=>$item}
+                <a href="{:url('/view-teacher/'.$item.id)}" class="teacher-item">
+                    <div class="teacher-item-top">
+                        <div class="teacher-avatar">
+                            <img title="{$item.lecturer_name}" alt="{$item.lecturer_name}" src="{:get_image_src($item.lecturer_head)}">
+                        </div>
+                        <div class="teacher-info">
+                            <div class="teacher-name">{$item.lecturer_name}</div>
+                            <div class="teacher-label">
+                                {foreach $item.label as $item_key=>$label}
+                                <div class="teacher-label-item">
+                                    {$label}
+                                </div>
+                                {/foreach}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="teacher-item-bottom">
+                        {$item.explain}
+                    </div>
+                </a>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {eq name="recommend.type" value="3"}
+    <!-- 虚拟物品-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>{$recommend.title}</h3>
+                <p>{$recommend.explain}</p>
+                <a href="{:url('/virtual')}" class="sec-hd-refresh">更多 <i class="el-icon-d-arrow-right"></i></a>
+            </div>
+            <div class="sec-bd">
+                {foreach $recommend['list'] as $key=>$item}
+                <div>
+                    <section class="course-card-expo-wrapper">
+                        <a class="kc-course-card" href="{:url('/view-virtual/' . $item.id)}">
+                            <div class="kc-course-card-cover">
+                                <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                            </div>
+                            <div class="kc-course-card-content">
+                                <h3 class="kc-course-card-name virtual" title="{$item.title}">{$item.title}</h3>
+                                <div class="kc-description">
+                                    {$item.description}
+                                </div>
+                                <div class="kc-course-card-footer normal">
+                                    <div class="kc-coursecard-footer-left">
+                                        <span class="kc-course-card-price">
+                                            <span class="kc-coursecard-price">
+                                                {eq name="item.pay_type" value="1"}
+                                                <span class="kc-coursecard-price-icon">
+                                                    <span class="coursedot">¥</span>
+                                                </span>
+                                                <span>{$item.money}</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="0"}
+                                                <span>免费</span>
+                                                {/eq}
+                                                {eq name="item.pay_type" value="2"}
+                                                <span>加密</span>
+                                                {/eq}
+                                            </span>
+                                        </span>
+                                        {neq name="item.member_money" value="$item.money"}
+                                        <span class="kc-vip-price">
+                                            <span class="kc-vip-label">VIP</span>
+                                            <span class="kc-vip-num">{$item.member_pay_type ? '¥'.$item.member_money : '免费'}</span>
+                                        </span>
+                                        {/neq}
+                                        <span class="kc-course-card-student-apply-num">{$item.ficti+$item.sales}次下载</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </section>
+                </div>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {eq name="recommend.type" value="4"}
+    <!-- 文章列表-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>{$recommend.title}</h3>
+                <p>{$recommend.explain}</p>
+                <a href="{:url('/articles')}" class="sec-hd-refresh">更多 <i class="el-icon-d-arrow-right"></i></a>
+            </div>
+            <div class="sec-bd">
+                {foreach $recommend['list'] as $key=>$item}
+                    <a href="{:url('/view-article/'.$item.id)}" class="article-item" title="{$item.title}">
+                        <div class="article-thumb" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image_input))})"></div>
+                        <div class="article-info">
+                            <h3 class="article-title">{$item.title}</h3>
+                            <div class="article-labels">
+                                {foreach $item['label'] as $label_key=>$label}
+                                <span class="article-label-item">{$label}</span>
+                                {/foreach}
+                            </div>
+                            <div class="article-description">
+                                {$item.synopsis}
+                            </div>
+                            <div class="article-meta">
+                                <div class="article-meta-item">
+                                    <i class="el-icon-view"></i>
+                                    {$item.visit}
+                                </div>
+                                <div class="article-meta-item">
+                                    <i class="el-icon-time"></i>
+                                    {$item.add_time}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                {/foreach}
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {eq name="recommend.type" value="5"}
+    <!--自动推荐模块-->
+    <div class="home-section">
+        <div class="sec-wrapper">
+            <div class="sec-hd">
+                <h3>为你推荐</h3>
+                <div class="recommend-cate-list">
+                    <div class="tabs-container">
+                        <div class="tabs-wrap">
+                            <div class="recommend-cate-item" @click="currentTab = 0" :class="{active: currentTab == 0}">
+                                报名最多
+                            </div>
+                            <div class="recommend-cate-item" @click="currentTab = 1" :class="{active: currentTab == 1}">
+                                好评最多
+                            </div>
+                            <div class="recommend-cate-item" @click="currentTab = 2" :class="{active: currentTab == 2}">
+                                新课推荐
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-content">
+<!--                    销量最高-->
+                <div class="sec-bd" v-show="currentTab == 0">
+                    {foreach $browse_count_list as $key=>$item}
+                    <div>
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                    <div class="kc-course-card-labels">
+                                        {foreach $item['label'] as $label_key=>$label}
+                                        <span class="kc-course-card-labels-item">{$label}</span>
+                                        {/foreach}
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    <span>免费</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    <span>加密</span>
+                                                    {/eq}
+                                                </span>
+                                            </span>
+                                            {neq name="item.member_money" value="$item.money"}
+                                            <span class="kc-vip-price">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{$item.member_pay_type ? '¥'.$item.member_money : '免费'}</span>
+                                            </span>
+                                            {/neq}
+                                            <span class="kc-course-card-student-apply-num">{$item.browse_count}人报名</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                    {/foreach}
+                </div>
+<!--                    好评最多-->
+                <div class="sec-bd" v-show="currentTab == 1">
+                    {foreach $good_recommend_list as $key=>$item}
+                    <div>
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                    <div class="kc-course-card-labels">
+                                        {foreach $item['label'] as $label_key=>$label}
+                                        <span class="kc-course-card-labels-item">{$label}</span>
+                                        {/foreach}
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    <span>免费</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    <span>加密</span>
+                                                    {/eq}
+                                                </span>
+                                            </span>
+                                            {neq name="item.member_money" value="$item.money"}
+                                            <span class="kc-vip-price">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{$item.member_pay_type ? '¥'.$item.member_money : '免费'}</span>
+                                            </span>
+                                            {/neq}
+                                            <span class="kc-course-card-student-apply-num">评分：{$item.score}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                    {/foreach}
+                </div>
+<!--                    新课-->
+                <div class="sec-bd" v-show="currentTab == 2">
+                    {foreach $newest_list as $key=>$item}
+                    <div>
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" href="{$item.is_light?url('/single-course'):url('/view-course')}?id={$item.id}">
+                                <div class="kc-course-card-cover">
+                                    <div class="kc-course-card-cover-img" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image))})"></div>
+                                </div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                    <div class="kc-course-card-labels">
+                                        {foreach $item['label'] as $label_key=>$label}
+                                        <span class="kc-course-card-labels-item">{$label}</span>
+                                        {/foreach}
+                                    </div>
+                                    <div class="kc-course-card-footer normal">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-price">
+                                                <span class="kc-coursecard-price">
+                                                    {eq name="item.pay_type" value="1"}
+                                                    <span class="kc-coursecard-price-icon">
+                                                        <span class="coursedot">¥</span>
+                                                    </span>
+                                                    <span>{$item.money}</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="0"}
+                                                    <span>免费</span>
+                                                    {/eq}
+                                                    {eq name="item.pay_type" value="2"}
+                                                    <span>加密</span>
+                                                    {/eq}
+                                                </span>
+                                            </span>
+                                            {neq name="item.member_money" value="$item.money"}
+                                            <span class="kc-vip-price">
+                                                <span class="kc-vip-label">VIP</span>
+                                                <span class="kc-vip-num">{$item.member_pay_type ? '¥'.$item.member_money : '免费'}</span>
+                                            </span>
+                                            {/neq}
+                                            <span class="kc-course-card-student-apply-num">{$item.browse_count}人报名</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </div>
+                    {/foreach}
+                </div>
+            </div>
+        </div>
+    </div>
+    {/eq}
+    {/foreach}
+    {notempty name="home_data.pc_home_bottom_img"}
+    <div class="home-ad-section">
+        <a href="{$home_data.pc_home_bottom_figure_link}" class="home-ad" target="_blank" style="background-image: url({:str_replace('\\\\','/',get_image_src($home_data.pc_home_bottom_img))})"></a>
+    </div>
+    {/notempty}
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_footer/index',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'swiper',
+        'api/home',
+        'mixins/base',
+        'mixins/router'
+    ], function (Vue, ELEMENT, BaseFooter, BaseLogin, BaseAgree, Swiper, homeApi, baseMixin, routerMixin) {
+        Vue.use(ELEMENT);
+        var allBannerList = {:json_encode($home_data.pc_banner_list)}
+
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-footer': BaseFooter,
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree,
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                advert: '',
+                advertLink: '',
+                rankList: [],
+                newList: [],
+                articleList: [],
+                articleNewList: [],
+                goodList: [],
+                automatic_recommend: '',
+                news_recommend: '',
+                hideCateTimer: null,
+                bannerList: allBannerList,
+                homeTopBg: allBannerList[0] ? 'url('+ allBannerList[0]['pic'] +')' : 'none',
+                currentTab: 0
+            },
+            watch: {
+                'publicData.site_name': function () {
+                    document.title = this.publicData.site_name;
+                }
+            },
+            created: function () {
+                this.index_data();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+
+                });
+            },
+            methods: {
+                bannerChanged: function (index) {
+                    this.homeTopBg = 'url({$img_domain}'+ allBannerList[index]['pic'] +')'
+                },
+                getHotSearch: function () {
+                    homeApi.hotSearch().then(function (res) {
+                        vm.hotSearch = res.data;
+                    });
+                },
+                index_data: function () {
+                    homeApi.index_data().then(function (res) {
+                        var data = res.data;
+                        vm.advert = data.pc_home_bottom_img;
+                        vm.advertLink = data.pc_home_bottom_figure_link;
+                        vm.automatic_recommend = data.pc_automatic_recommend;
+                        vm.news_recommend = data.pc_news_recommend;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                showCateSub: function (e) {
+                    clearTimeout(this.hideCateTimer)
+                    e.currentTarget.classList.add('js-menu-item-on')
+                    var index = e.currentTarget.dataset.index
+                    var allSubMenu = document.querySelectorAll('.submenu');
+                    var allMenu = document.querySelectorAll('.menuContent .item');
+                    for (var i = 0; i < allSubMenu.length; i++) {
+                        if (i != index) {
+                            allSubMenu[i].style.display = 'none'
+                            allMenu[i].classList.remove('js-menu-item-on')
+                        }
+                    }
+                    var subMenu = document.querySelectorAll('.submenu[data-index="'+ index +'"]');
+                    if (subMenu.length){
+                        subMenu[0].style.display = 'block'
+                    }
+                },
+                keepCateSub: function () {
+                    clearTimeout(this.hideCateTimer)
+                },
+                hideCateSub: function () {
+                    this.hideCateTimer = setTimeout(function () {
+                        var allSubMenu = document.querySelectorAll('.submenu');
+                        var allMenu = document.querySelectorAll('.menuContent .item');
+                        for (var i = 0; i < allSubMenu.length; i++) {
+                            allSubMenu[i].style.display = 'none'
+                            allMenu[i].classList.remove('js-menu-item-on')
+                        }
+                    }, 500)
+                }
+            }
+        });
+    });
+</script>
+{/block}

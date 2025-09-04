@@ -1,0 +1,178 @@
+
+{extend name="public/container"}
+{block name="title"}活动报名-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    body {
+        padding-bottom: 1rem;
+        background-color: #f5f5f5;
+    }
+   .link .cont{display:inline-block;vertical-align:middle;font-weight:400;font-size:.18rem;line-height:.36rem;color:#666;}
+   .link .cont img{width:0.4rem;height:0.4rem;margin:auto;display: block;}
+   .picker .picker-panel .picker-choose .cancel, .picker .picker-panel .picker-choose .confirm{top:0 !important;}
+   .picker .picker-panel .picker-choose .confirm{color:#2c8eff !important;}
+   .picker .picker-panel .wheel-wrapper .wheel{font-size:.3rem !important;}
+   .picker .picker-panel .picker-choose{font-size:.3rem !important;}
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="activity">
+        <div class="header">
+            <div class="image">
+                <img class="img" :src="activity.image">
+            </div>
+            <div class="text">
+                <div class="name" v-text="activity.title"></div>
+                <div class="group">
+                    <div class="money" >¥<span class="num" v-text="activity.price"></span>
+                        <span class="vip-price" style="color: #0A0A0A;">¥{{ activity.member_price }}</span>
+                        <img class="vip-price-icon" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/vip.png">
+                    </div>
+                    <div>{{ activity.count }}人已报名</div>
+                </div>
+            </div>
+            <div class="info">
+                <div class="item">
+                    <div class="iconfont iconshijian2"></div>
+                    <div class="cont">报名时间：{{activity.signup_start_time}}至{{activity.signup_end_time}}</div>
+                </div>
+                <div class="item">
+                    <div class="iconfont iconshijian2"></div>
+                    <div class="cont">活动时间：{{activity.start_time}}至{{activity.end_time}}</div>
+                </div>
+                <div class="item">
+                    <div class="iconfont icondidian"></div>
+                    <div class="cont">活动地址：{{activity.province}}{{activity.city}}{{activity.district}}{{activity.detail}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="chat" v-if="isPay">
+            <div class="text">赶紧加入活动群聊吧~</div>
+            <div class="btn"  @click=" open = true ">加入群聊</div>
+        </div>
+        <div class="main">
+            <div class="nav-bar">
+                <div :class="{ on: navOn === 1 }" class="item" @click="navOn = 1">详情</div>
+                <div :class="{ on: navOn === 2 }" class="item" @click="navOn = 2">规则</div>
+            </div>
+            <div class="nav-cont">
+                <!-- 详情 -->
+                <div v-show="navOn === 1" class="section">{$content}</div>
+                <!-- 规则 -->
+                <div v-show="navOn === 2" class="section">{$activity_rules}</div>
+            </div>
+        </div>
+        <div class="footer">
+            <a class="link" href="{$m_home_url}">
+                <div class="cont">
+                    <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/detail-home.png">
+                    <div>首页</div>
+                </div>
+            </a>
+            <button class="button" type="button" v-if="activity.status==0" disabled>未开始报名</button>
+            <template v-else-if="activity.status==1">
+                <button class="button" type="button" v-if="activity.number > activity.count" @click="activitySign">去报名</button>
+                <button class="button" type="button" v-else disabled>报名结束</button>
+            </template>
+            <button class="button" type="button" v-else-if="activity.status==2 || activity.status==3" disabled>报名结束</button>
+            <button class="button" type="button" v-else disabled>活动结束</button>
+        </div>
+        <div class="groupCode" v-show="open">
+            <div class="code"><img :src="activity.qrcode_img"></div>
+            <div class="codeTip">扫码进群</div>
+        </div>
+        <div :class="{ mask: open }" @click="open = false"></div>
+    </div>
+    <base-login :login-show="loginShow" :site-name="siteName" @login-close="loginClose"></base-login>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'store', 'components/base_login/index'], function (Vue, store, BaseLogin) {
+        var uid = "{$uid}" || 0;
+        var activity = {$activity};
+        var siteName = '{$Auth_site_name}';
+        var isWeChat = '{$isWechat}';
+        var isMember = {$is_member};
+        new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin
+            },
+            data: {
+                navOn: 1,
+                isRestrictions: 0,
+                open: false,
+                activity: activity,
+                siteName: siteName,
+                isPay: 0,
+                isMember: isMember,
+                loginShow: false,
+                isWeChat: isWeChat,
+                specialEvent: ''
+            },
+            created: function () {
+                var vm = this;
+                this.activityType();
+                this.specialEvent = $h.U({
+                    c: 'special',
+                    a: 'event',
+                    q: {
+                        id: this.activity.id
+                    }
+                });
+                if (this.isWeChat) {
+                    mapleWx($jssdk(), function () {
+                        this.onMenuShareAll({
+                            title: vm.activity.title,
+                            desc: (vm.activity.province === vm.activity.city ? '' : vm.activity.province) + vm.activity.city + vm.activity.district + vm.activity.detail,
+                            imgUrl: vm.activity.image,
+                            link: window.location.href + (window.location.search ? '&' : '?') + 'spread_uid=' + uid
+                        });
+                    });
+                }
+            },
+            methods: {
+                activityType: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'special',
+                        a: 'activityType',
+                        q: {
+                            id: this.activity.id
+                        }
+                    }), function (res) {
+                        var data = res.data.data;
+                        vm.isPay = data.is_pay;
+                        vm.isRestrictions = data.is_restrictions;
+                    });
+                },
+                activitySign: function () {
+                    var vm = this;
+                    store.baseGet($h.U({
+                        c: 'index',
+                        a: 'user_login'
+                    }), function () {
+                        if (vm.isRestrictions) {
+                            $h.pushMsg('您的报名已超过限额');
+                        } else {
+                            window.location.assign(vm.specialEvent);
+                        }
+                    }, function () {
+                        vm.loginShow = true;
+                    });
+                },
+                // 关闭登录弹窗
+                loginClose: function (data) {
+                    this.loginShow = false;
+                    if (data) {
+                        window.location.assign(this.specialEvent);
+                    }
+                }
+            }
+        });
+    });
+</script>
+{/block}

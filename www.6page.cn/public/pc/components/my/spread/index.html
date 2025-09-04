@@ -1,0 +1,62 @@
+<div class="my-coin">
+    <h1 class="my-title">我的推广</h1>
+    <div class="total">
+        <ul>
+            <li>
+                <div>可提现金额(元)：</div>
+                <div>{{ userInfo.brokerage_price }}</div>
+            </li>
+            <li>
+                <div>今日收益(元)：</div>
+                <div>{{ spread.income }}</div>
+            </li>
+            <li>
+                <div>今日订单：</div>
+                <div>{{ spread.order_count }}</div>
+            </li>
+            <li>
+                <div>新增学员：</div>
+                <div>{{ spread.spread_count }}</div>
+            </li>
+        </ul>
+    </div>
+    <div class="spread-tips">
+        <h4>友情提示</h4>
+        <div class="spread-tips-import">佣金提现及推广明细请进手机端个人中心查看；</div>
+        <ul>
+            <li>当已登录用户点击推广链接时绑定推广关系（需用户已登录状态）；</li>
+            <li>当用户已有上级、用户进入商城未授权或注册、用户已经是推广员（指定分销模式），不能绑定推广关系；</li>
+            <li>用户之前访问过商城，但没有上级时，可以绑定推广关系；</li>
+        </ul>
+    </div>
+    <div class="spread-list">
+        <h1 class="my-title">推广素材</h1>
+        <div class="spread-box">
+            <el-tabs v-model="activeName" @tab-click="tabChange">
+                <el-tab-pane v-for="item in spreadCate" :label="item.name" :name="item.id"></el-tab-pane>
+            </el-tabs>
+            <div class="spread-section">
+                <div class="spread-item-section" v-for="cateItem in spreadList" :key="cateItem.id">
+                    <div class="spread-cate-name">{{cateItem.name}}</div>
+                    <div class="spread-item" v-for="item in cateItem.list" :key="item.id">
+                        <div class="spread-img" :style="{'background-image': 'url('+ replace_url(item.image) +')'}"></div>
+                        <div class="spread-data">
+                            <h3>{{item.title}}</h3>
+                            <div class="spread-meta">
+                                <div class="spread-price">
+                                    ¥{{item.money}}
+                                    <span>返利 ¥{{item.spread_money}}</span>
+                                </div>
+                                <el-button size="small" @click="copySpreadLink(item.spread_url)">复制推广链接</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <el-empty v-if="spreadList.length==0 && loaded" image="/pc/images/empty4.png" description="暂无数据～"></el-empty>
+            <div v-if="spreadList.length" class="pagination">
+                <el-pagination layout="prev, pager, next" :total="count" :page-size="limit" :current-page.sync="page"></el-pagination>
+            </div>
+        </div>
+    </div>
+</div>

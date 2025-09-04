@@ -1,0 +1,211 @@
+
+{extend name="public/container"}
+{block name="title"}讲师列表-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .list .item {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        position: relative;
+        height: 2rem;
+        padding: 0 .3rem;
+    }
+
+    .list .item::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 1.49rem;
+        border-bottom: 1px solid #f2f2f2;
+    }
+
+    .list .item .img {
+        width: 1.3rem;
+        height: 1.3rem;
+        border-radius: 50%;
+    }
+
+    .list .item .text {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        min-width: 0;
+        margin-left: .22rem;
+    }
+
+    .list .item .name {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-weight: bold;
+        font-size: .3rem;
+        line-height: .42rem;
+        color: #282828;
+    }
+
+    .list .item .label {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        margin-top: .06rem;
+    }
+
+    .list .item .label .cell {
+        height: .34rem;
+        padding: 0 .12rem;
+        border-radius: .1rem;
+        background-color: #FFF0E5;
+        font-size: .22rem;
+        line-height: .34rem;
+        color: #FF6B00;
+    }
+
+    .list .item .label .cell ~ .cell {
+        margin-left: .1rem;
+    }
+
+    .list .item .attr {
+        margin-top: .09rem;
+        font-size: .26rem;
+        line-height: .37rem;
+        color: #385270;
+    }
+
+    .empty {
+        margin-top: 2rem;
+        font-size: .28rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .empty .img {
+        width: 4.14rem;
+        height: 2.4rem;
+    }
+    .loading {
+        font-size: .4rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .loaded {
+        font-size: .28rem;
+        line-height: .72rem;
+        text-align: center;
+        color: #999;
+    }
+    .teacher-hd {
+        padding: 0.3rem 0.2rem;
+        font-size: 16px;
+        font-weight: bold;
+        color: #000;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="teacher-hd">
+        全部讲师
+    </div>
+    <div class="new-teacher-list" v-if="lecturerList.length">
+        <a
+                class="new-teacher-item"
+                v-for="(itm, index) in lecturerList"
+                :key="index"
+                :href="'{:url('/m/view-teacher')}?id=' + itm.id"
+        >
+            <div class="new-teacher-img">
+                <img class="img" :src="itm.lecturer_head">
+            </div>
+            <div class="new-teacher-info">
+                <div class="new-teacher-name">
+                    {{itm.lecturer_name}}
+                    <span class="teacher-meta">
+                        <em>{{ itm.study }}人学习</em><em>{{ itm.curriculum }}课时</em>
+                    </span>
+                </div>
+                <div class="new-teacher-labels">
+                    <template v-for="(v, i) in itm.label">
+                        <div class="label" :key="i">{{ v }}</div>
+                    </template>
+                </div>
+                <div class="new-teacher-desc">{{itm.explain}}</div>
+            </div>
+        </a>
+        <div v-show="loading" class="loading">
+            <span class="fa fa-spinner loadingpic"></span>
+        </div>
+        <div v-if="finished" class="loaded">{{loadTitle}}</div>
+    </div>
+    <div v-else-if="finished" class="empty">
+        <img class="img" src="{$Think.const.IMG_DOMAIN}/wap/images/empty.png">
+        <div>暂无讲师</div>
+    </div>
+{include file="public/store_menu"}
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'store', 'helper', '{__WAP_PATH}/js/quick.js'], function (Vue, storeApi, $h) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                loading: false,
+                finished: false,
+                page: 1,
+                limit: 10,
+                lecturerList: []
+            },
+            created: function () {
+                this.getLecturerList();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    var that = this;
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        that.getLecturerList();
+                    });
+                });
+            },
+            methods: {
+                // 讲师列表
+                getLecturerList: function () {
+                    var that = this;
+                    if (this.loading || this.finished) {
+                        return;
+                    }
+                    that.loading = true;
+                    $h.loadFFF();
+                    storeApi.baseGet($h.U({
+                        c: 'Special',
+                        a: 'lecturerList',
+                        q: {
+                            page: that.page++,
+                            limit: that.limit
+                        }
+                    }), function (res) {
+                        var arr = res.data.data;
+                        that.loading = false;
+                        $h.loadClear();
+                        that.lecturerList = that.lecturerList.concat(arr);
+                        that.finished = arr.length < that.limit;
+                        that.loadTitle = that.finished ? '已全部加载' : '上拉加载更多';
+                    }, function (res) {
+                        $h.loadClear();
+                        that.loadTitle = '上拉加载更多';
+                        that.loading = false;
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

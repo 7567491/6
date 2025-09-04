@@ -1,0 +1,60 @@
+<div class="login-dg">
+    <div class="login-dialog">
+        <el-form>
+            <el-form-item v-show="state === 1">注册账号</el-form-item>
+            <el-form-item v-show="state === 2">找回密码</el-form-item>
+            <el-form-item v-show="state === 3">
+                <div class="login-tab">
+                    <el-radio-group v-model="type">
+                        <el-radio-button :label="1" v-if="login_types == 1 || login_types == 3">账号登录</el-radio-button>
+                        <el-radio-button :label="2" v-if="login_types == 1 || login_types == 3">验证码登录</el-radio-button>
+                        <el-radio-button :label="3" v-if="login_types == 1 || login_types == 2">扫码登录</el-radio-button>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            <el-form-item v-show="type !== 3">
+                <el-input v-model.trim="phone" placeholder="请输入手机号" clearable></el-input>
+            </el-form-item>
+            <el-form-item v-show="state !== 3 || type === 2">
+                <el-input v-model.trim="code" placeholder="请输入验证码" maxlength="6" minlength="6" clearable>
+                    <el-button class="fetch-code" id="captcha-btn" slot="append" :disabled="count >= 0" @click="getCode">{{ count < 0 ? '获取验证码' : '重新获取(' + count + 's)' }}</el-button>
+                </el-input>
+            </el-form-item>
+            <el-form-item v-show="state === 3 && type === 1" class="mb0">
+                <el-input v-model.trim="pwd" placeholder="请输入密码" maxlength="16" minlength="8" show-password></el-input>
+            </el-form-item>
+            <div class="rlf-group" v-show="state === 3 && type === 1">
+                <a href="javascript:;" @click="state = 2" class="rlf-forget">忘记密码</a>
+            </div>
+            <el-form-item v-show="state === 1" class="mb0">
+                <el-input v-model.trim="pwd" placeholder="请输入8-16位字母加数字组合密码" maxlength="16" minlength="8" show-password></el-input>
+            </el-form-item>
+            <el-form-item v-show="state === 2">
+                <el-input v-model.trim="pwd" placeholder="请输入8-16位字母加数字组合新密码" maxlength="16" minlength="8" show-password></el-input>
+            </el-form-item>
+            <el-form-item v-show="state === 1 && type !== 3" class="mb0">
+                已有账号？<el-button type="text" @click="state = 3">立即登录</el-button>
+            </el-form-item>
+            <el-form-item class="go-next-btn mb0">
+                <el-button type="primary" round size="medium"  v-show="state === 1 && type !== 3" @click="register">注册</el-button>
+                <el-button type="primary" round size="medium"  v-show="state === 2 && type !== 3" @click="register">确认</el-button>
+                <el-button type="primary" round size="medium" v-show="state === 3 && type !== 3" @click="login">登录</el-button>
+            </el-form-item>
+            <el-form-item v-show="state === 3 && type !== 3" class="go-register">
+                <el-button type="text" @click="state = 1">快速注册</el-button>
+            </el-form-item>
+            <el-form-item v-show="state !== 2 && type !== 3" class="agree-txt">
+                <el-checkbox v-model="agree">我已阅读并同意<el-button type="text" @click="$emit('agree-open')">《{{ agreeContent.title }}》</el-button></el-checkbox>
+            </el-form-item>
+            <el-form-item v-show="state === 2 && type !== 3" class="go-register">
+                <el-button type="text" @click="state = 3">立即登录</el-button>
+            </el-form-item>
+            <el-form-item v-show="type === 3">
+                <div class="qrcode-box">
+                    <div id="login-qrcode"></div>
+                </div>
+            </el-form-item>
+        </el-form>
+    </div>
+    <div id="slide-captcha" class="slide-captcha"></div>
+</div>

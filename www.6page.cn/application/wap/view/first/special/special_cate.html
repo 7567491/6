@@ -1,0 +1,437 @@
+
+{extend name="public/container"}
+{block name="title"}所有课程-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .free{margin-top:.1rem;font-weight:400;font-size:.22rem;line-height:.38rem;color:#FF6B00;}
+    .nothing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 4.14rem;
+        -webkit-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+</style>
+<script src="/wap/js/scroll.js"></script>
+<script src="/wap/js/navbarscroll.js"></script>
+{/block}
+{block name="content"}
+<div v-cloak id="app" class="goodsClass indexNew">
+    <div class="header">
+        <div class="search acea-row row-middle">
+            <form class="form" @submit.prevent="goSearch">
+                <label class="label">
+                    <img class="img" src="{$Think.const.IMG_DOMAIN}/wap/images/search.png">
+                    <input class="input" v-model="search" placeholder="输入课程名称">
+                </label>
+                <input class="submit" type="submit" value="搜索">
+            </form>
+        </div>
+        <div class="filter-nav">
+            <div class="filter-nav-tab">
+                <div class="filter-nav-tab-item">
+                    <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': sortPanel.show}" @click="showPanel('sort')">
+                        <p class="filter-nav-title">{{sortPanel.currentTypeName}}</p>
+                        <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                    </div>
+                </div>
+                <div class="filter-nav-tab-item">
+                    <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': catePanelShow}" @click="showPanel('cate')">
+                        <p class="filter-nav-title">{{cate_name}}</p>
+                        <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                    </div>
+                </div>
+                <div class="filter-nav-tab-item">
+                    <div class="filter-nav-tab-item" :class="{'filter-nav-tab-selected': otherPanel.show}" @click="showPanel('other')">
+                        <p class="filter-nav-title">筛选</p>
+                        <span class="filter-nav-icon iconfont iconxiangxia"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="filter-nav-panel filter-nav-sort" :class="{'filter-nav-panel-show': sortPanel.show}">
+                <ul class="filter-nav-menu filter-nav-sort-menu">
+                    <li
+                        v-for="item in sortPanel.list"
+                        :key="item.name"
+                        class="filter-nav-menu-item"
+                        :class="{'filter-nav-menu-item-selected': sortPanel.currentType == item.value}"
+                        @click="switchSort(item.value, item.name)"
+                    >{{item.name}}</li>
+                </ul>
+            </div>
+            <div class="filter-nav-panel filter-nav-cate" :class="{'filter-nav-panel-show': catePanelShow}">
+                <div class="filter-cate-inner">
+                    <ul class="filter-cate-level1">
+                        <li
+                            v-for="(item, index) in gradeCate"
+                            :key="item.id"
+                            @click="switchGradeCate(item.id, index, item.name)"
+                            :class="{'filter-cate-selected': cate_id === item.id}"
+                        >{{item.name}}</li>
+                    </ul>
+                    <ul class="filter-cate-level2">
+                        <li
+                            v-for="(item, index) in subjectCate"
+                            :key="item.id"
+                            @click="switchSubjectCate(item.id, index, item.name)"
+                            :class="{'filter-cate-selected': subject_id === item.id}"
+                        >{{item.name}}</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="filter-nav-panel filter-nav-other" :class="{'filter-nav-panel-show': otherPanel.show}">
+                <div class="filter-other-section">
+                    <h2>课程类型</h2>
+                    <div class="filter-other-menu">
+                        <div
+                            v-for="item in otherPanel.typeList"
+                            :key="item.name"
+                            class="filter-other-btn"
+                            :class="{'filter-other-btn-selected': otherPanel.type === item.value}"
+                            @click="switchType(item.value)"
+                        >
+                            <button>{{item.name}}</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-other-section">
+                    <h2>收费方式</h2>
+                    <div class="filter-other-menu">
+                        <div
+                            v-for="item in otherPanel.payList"
+                            :key="item.name"
+                            class="filter-other-btn"
+                            :class="{'filter-other-btn-selected': otherPanel.is_pay === item.value}"
+                            @click="switchPay(item.value)"
+                        >
+                            <button>{{item.name}}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="filter-nav-mask" v-show="panelMask" @click="hidePanel"></div>
+        </div>
+    </div>
+    <div class="interest english">
+        <div class="list acea-row row-between-wrapper">
+            <a
+                v-for="item in updateSpecialList" :key="item.id" :href="item.is_light ? '{:url('/m/single-course')}?id=' + item.id : '{:url('/m/view-course')}?id=' + item.id"
+                class="item"
+            >
+                <div class="pictrue">
+                    <img :src="fx_cdn_img(item.image)" :alt="item.title">
+                    <div class="label">{{ item.special_type }}</div>
+                </div>
+                <div class="text">
+                    <div class="title acea-row row-middle">
+                        <div class="name line1" v-text="item.title"></div>
+                    </div>
+                    <div class="group acea-row row-middle row-between">
+                        <div>
+                            <div class="money" v-if="item.money > 0">¥<span class="num">{{item.money}}</span></div>
+                            <div class="free" v-else>免费</div>
+<!--                            <span v-if="!item.is_light && item.type!=4" class="total">共{{item.count}}节</span>-->
+                        </div>
+                        <div class="total">{{item.browse_count}}人已报名</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <div v-if="loadend && !specialList.length">
+        <img class="nothing"  src="{$Think.const.IMG_DOMAIN}/wap/images/no_data_available.png">
+    </div>
+    <p v-else class="loading-line">
+        <span v-show="loading" class="fa fa-spinner loadingpic" style="font-size: 0.4rem;"></span>
+        <span v-text="loadTitle">加载更多</span>
+    </p>
+    <div style="height: 1.0rem"></div>
+    {include file="public/store_menu"}
+</div>
+{/block}
+{block name="foot"}
+<script>
+    var cate_id = {$cate_id};
+    var subject_id = {$subject_id};
+    require(['vue', 'axios', 'helper', 'special-type'], function (Vue, axios, $h, specialType) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                specialList: [],
+                search: '',
+                loadTitle: '',
+                page: 1,
+                limit: 10,
+                loading: false,
+                loadend: false,
+                count: 0,
+                panelMask: false,
+                // 排序筛选面板
+                sortPanel: {
+                    show: false,
+                    currentType: '',
+                    currentTypeName: '综合排序',
+                    list: [
+                        {
+                            name: '综合排序',
+                            value: ''
+                        },
+                        {
+                            name: '销量最高',
+                            value: 'salesOrder,desc'
+                        },
+                        {
+                            name: '销量最低',
+                            value: 'salesOrder,asc'
+                        },
+                        {
+                            name: '评分最高',
+                            value: 'scoreOrder,desc'
+                        },
+                        {
+                            name: '评分最低',
+                            value: 'scoreOrder,asc'
+                        }
+                    ]
+                },
+                gradeCate: [],
+                subjectCate: [
+                    {
+                        id: 0,
+                        name: '全部'
+                    }
+                ],
+                cate_id: cate_id,
+                cate_name: '全部分类',
+                // 记录当前一级分类名，用于二级分类选择全部时显示
+                current_top_cate_name: '全部分类',
+                subject_id: 0,
+                catePanelShow: false,
+                otherPanel: {
+                    show: false,
+                    type: '',
+                    is_pay: '',
+                    typeList: [
+                        {
+                            name: '图文课',
+                            value: 1
+                        },
+                        {
+                            name: '音频课',
+                            value: 2
+                        },
+                        {
+                            name: '视频课',
+                            value: 3
+                        },
+                        {
+                            name: '直播课',
+                            value: 4
+                        },
+                        {
+                            name: '套餐课',
+                            value: 5
+                        },
+                        {
+                            name: '精简课',
+                            value: 6
+                        }
+                    ],
+                    payList: [
+                        {
+                            name: '免费',
+                            value: 0
+                        },
+                        {
+                            name: '付费',
+                            value: 1
+                        }
+                    ]
+                },
+                salesOrder: '',
+                scoreOrder: ''
+            },
+            computed: {
+                updateSpecialList: function () {
+                    return this.specialList.map(function (value) {
+                        value.special_type = specialType[value.type];
+                        return value;
+                    });
+                }
+            },
+            created: function () {
+                this.getCateList();
+            },
+            mounted: function () {
+                this.getSpecialList();
+                this.$nextTick(function () {
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        this.getSpecialList();
+                    }.bind(this), false);
+                });
+            },
+            methods: {
+                resetList() {
+                    this.loadend = false;
+                    this.page = 1;
+                    this.specialList = [];
+                },
+                showPanel: function (type) {
+                    this.panelMask = true;
+                    if (type === 'sort') {
+                        this.catePanelShow = false
+                        this.otherPanel.show = false
+                        this.sortPanel.show = !this.sortPanel.show;
+                        if(!this.sortPanel.show) {
+                            this.panelMask = false;
+                        }
+                    }
+                    if (type === 'cate') {
+                        this.sortPanel.show = false
+                        this.otherPanel.show = false
+                        this.catePanelShow = !this.catePanelShow;
+                        if(!this.catePanelShow) {
+                            this.panelMask = false;
+                        }
+                    }
+                    if (type === 'other') {
+                        this.sortPanel.show = false
+                        this.catePanelShow = false
+                        this.otherPanel.show = !this.otherPanel.show;
+                        if(!this.otherPanel.show) {
+                            this.panelMask = false;
+                        }
+                    }
+                },
+                hidePanel: function () {
+                    this.panelMask = false;
+                    this.sortPanel.show = false;
+                    this.catePanelShow = false;
+                    this.otherPanel.show = false
+                },
+                switchSort: function (value, name) {
+                    this.resetList();
+                    this.sortPanel.currentType = value;
+                    this.sortPanel.currentTypeName = name;
+                    this.salesOrder = '';
+                    this.scoreOrder = '';
+                    // 计算排序类型
+                    if (value !== '') {
+                        var sortType = value.split(',');
+                        this[sortType[0]] = sortType[1];
+                    }
+                    this.hidePanel();
+                    this.getSpecialList();
+                },
+                switchGradeCate: function (value, index, name) {
+                    this.resetList();
+                    this.cate_id = value;
+                    this.subject_id = 0;
+                    // 复制列表，防止多次出现全部按钮
+                    var subjectCate = JSON.parse(JSON.stringify(this.gradeCate[index]['children']));
+                    subjectCate.unshift({
+                        id: 0,
+                        name: '全部'
+                    });
+                    this.subjectCate = subjectCate;
+                    this.cate_name = this.current_top_cate_name = value === 0 ? '全部分类' : name;
+                    this.getSpecialList();
+                },
+                switchSubjectCate: function (value, index, name) {
+                    this.resetList();
+                    this.subject_id = value;
+                    this.cate_name = value === 0 ? this.current_top_cate_name : name;
+                    this.hidePanel();
+                    this.getSpecialList();
+                },
+                switchType: function (value) {
+                    this.resetList();
+                    if(this.otherPanel.type === value) {
+                        this.otherPanel.type = '';
+                    } else {
+                        this.otherPanel.type = value;
+                    }
+                    this.getSpecialList();
+                },
+                switchPay: function (value) {
+                    this.resetList();
+                    if(this.otherPanel.is_pay === value) {
+                        this.otherPanel.is_pay = '';
+                    } else {
+                        this.otherPanel.is_pay = value;
+                    }
+                    this.getSpecialList();
+                },
+                goSearch: function () {
+                    this.resetList();
+                    this.grade_id = 0;
+                    this.subject_id = 0;
+                    this.otherPanel.is_pay = '';
+                    this.otherPanel.type = '';
+                    this.getSpecialList();
+                },
+                // 获取导航数据
+                getCateList: function () {
+                    axios.get("{:url('special/get_grade_cate')}").then(function (res) {
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            vm.gradeCate = resData.data;
+                            if (this.cate_id) {
+                                for (var i = 0; i < vm.gradeCate.length; i++) {
+                                    if (vm.gradeCate[i].id === this.cate_id) {
+                                        vm.cate_name = vm.current_top_cate_name = vm.gradeCate[i].name;
+                                    }
+                                }
+                            }
+                            vm.gradeCate.unshift({
+                                id: 0,
+                                name: '全部',
+                                children: []
+                            });
+                        } else {
+                            $h.pushMsg(resData.msg);
+                        }
+                    }).catch(function () {
+                    });
+                },
+
+                // 课程列表
+                getSpecialList: function () {
+                    if (this.loading || this.loadend) {
+                        return;
+                    };
+                    this.loading = true;
+                    this.loadTitle = '';
+                    axios.get("{:url('special/get_special_list')}", {
+                        params: {
+                            cate_id: this.cate_id,
+                            subject_id: this.subject_id,
+                            search: this.search,
+                            type: this.otherPanel.type,
+                            is_pay: this.otherPanel.is_pay,
+                            salesOrder: this.salesOrder,
+                            scoreOrder: this.scoreOrder,
+                            page: this.page++,
+                            limit: this.limit
+                        }
+                    }).then(function (res) {
+                        vm.loading = false;
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            var data = resData.data.data;
+                            vm.specialList = vm.specialList.concat(data);
+                            vm.loadend = vm.limit > data.length;
+                            vm.loadTitle = vm.loadend ? '已全部加载完' : '上拉加载更多';
+                        } else {
+                            $h.pushMsg(resData.msg);
+                        }
+                    }).catch(function () {
+                        vm.loading = false;
+                    });
+                }
+            }
+        });
+    })
+</script>
+{/block}

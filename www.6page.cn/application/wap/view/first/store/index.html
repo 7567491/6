@@ -1,0 +1,190 @@
+
+{extend name="public/container"}
+{block name="title"}商品列表-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    .nothing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 4rem;
+        -webkit-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="store-home">
+        <div v-if="banner.length" class="banner">
+            <div id="swiper1" class="swiper-container" @click="swiper1Click">
+                <div class="swiper-wrapper">
+                    <div v-for="(item, index) in banner" :key="index" :data-url="item.url" class="swiper-slide">
+                        <img :src="fx_cdn_img(item.pic)" :alt="item.title">
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+        <div id="swiper2" class="swiper-container" @click="swiper2Click">
+            <div class="swiper-wrapper">
+                <div v-for="(item, index) in cateList" :key="item.id" :class="{ on: index === clickedIndex }" class="swiper-slide">{{ item.cate_name }}</div>
+            </div>
+        </div>
+        <div class="goods-section">
+            <div class="list">
+                <a v-for="item in goodsList" :key="item.id" class="item" :href="'{:url('/m/view-product')}?id=' + item.id">
+                    <div class="image">
+                        <img class="img" :src="fx_cdn_img(item.image)" alt="">
+                    </div>
+                    <div class="text">
+                        <div class="title">{{ item.store_name }}</div>
+                        <div class="group">
+                            <div class="price">￥<span class="num">{{ item.price }}</span></div>
+                            <div class="sale">已售{{ item.sales }}件</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div v-if="goodsList.length && !loading" class="finished">{{ loadTitle }}</div>
+            <div v-if="finished && !goodsList.length" class="empty">
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/empty.png" alt="暂无商品">
+                <div>暂无商品</div>
+            </div>
+        </div>
+    </div>
+    {include file="public/store_menu"}
+</div>
+<script>
+    var banner = {$banner};
+    require(['vue', 'store', 'helper', 'swiper'], function (Vue, api, $h, Swiper) {
+        var app = new Vue({
+            el: '#app',
+            data: {
+                banner: banner ? banner : [],
+                cateList: [],
+                goodsList: [],
+                clickedIndex: 0,
+                activeId: 0,
+                loadTitle: '',
+                page: 1,
+                limit: 16,
+                loading:false,
+                finished:false
+            },
+            created: function () {
+                this.getCateList();
+                this.getGoodsList();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    this.swiper1 = new Swiper('#swiper1', {
+                        autoplay: true,
+                        loop: true,
+                        spaceBetween: 20,
+                        pagination: {
+                            el: '.swiper-pagination'
+                        }
+                    });
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        this.getGoodsList();
+                    }.bind(this));
+                });
+            },
+            methods: {
+                // 点击轮播图
+                swiper1Click: function () {
+                    if (this.swiper1.clickedIndex === undefined) {
+                        return;
+                    }
+                    var url = this.banner[this.swiper1.realIndex].url;
+                    if (url.indexOf('http') === -1) {
+                        return;
+                    }
+                    window.location = url;
+                },
+                // 获取分类
+                getCateList: function () {
+                    $h.loadFFF();
+                    api.baseGet($h.U({
+                        c: 'store',
+                        a: 'getcategory'
+                    }), function (res) {
+                        $h.loadClear();
+                        this.cateList = res.data.data;
+                        this.cateList.unshift({
+                            cate_name: '全部',
+                            id: 0
+                        });
+                        this.$nextTick(function () {
+                            this.swiper2 = new Swiper('#swiper2', {
+                                freeMode: true,
+                                slidesPerView: 'auto',
+                                observer: true
+                            });
+                        });
+                    }.bind(this), function () {
+                        $h.loadClear();
+                    });
+                },
+                // 获取商品列表
+                getGoodsList: function (id) {
+                    if (this.loading || this.finished) {
+                        return;
+                    }
+                    this.loadTitle = '';
+                    this.loading = true;
+                    $h.loadFFF();
+                    api.baseGet($h.U({
+                        c: 'store',
+                        a: 'getproductlist',
+                        p: {
+                            cId: this.activeId,
+                            page: this.page++,
+                            limit: this.limit
+                        }
+                    }), function (res) {
+                        this.loading = false;
+                        $h.loadClear();
+                        var data = res.data.data;
+                        this.goodsList = this.goodsList.concat(data);
+                        this.finished = data.length < this.limit;
+                        this.loadTitle = this.finished ? '已全部加载完' : '上拉加载更多';
+                    }.bind(this), function () {
+                        $h.loadClear();
+                        this.loading = false;
+                    }.bind(this));
+                },
+                // 点击商品分类
+                swiper2Click: function () {
+                    if (this.swiper2.clickedIndex === undefined || this.loading) {
+                        return;
+                    }
+                    var swiperWidth = this.swiper2.width;
+                    var wrapperWidth = this.swiper2.$wrapperEl[0].scrollWidth;
+                    var clickedWidth = this.swiper2.clickedSlide.offsetWidth;
+                    var clickedLeft = this.swiper2.clickedSlide.offsetLeft;
+
+                    this.clickedIndex = this.swiper2.clickedIndex;
+
+                    this.swiper2.setTransition(300);
+
+                    if (clickedLeft < (swiperWidth - clickedWidth) / 2) {
+                        this.swiper2.setTranslate(0);
+                    } else if (clickedLeft > wrapperWidth - (clickedWidth + swiperWidth) / 2) {
+                        this.swiper2.setTranslate(swiperWidth - wrapperWidth);
+                    } else {
+                        this.swiper2.setTranslate((swiperWidth - clickedWidth) / 2 - clickedLeft);
+                    }
+
+                    this.goodsList = [];
+                    this.page = 1;
+                    this.finished = false;
+                    this.activeId = this.cateList[this.clickedIndex].id;
+                    this.getGoodsList();
+                }
+            }
+        });
+    });
+</script>
+{/block}

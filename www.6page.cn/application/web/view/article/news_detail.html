@@ -1,0 +1,92 @@
+{extend name="public/container"}
+{block name="title"}{$article.title}-{$public_data.site_name}{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="article-detail">
+   <div class="section-main">
+       <div class="detail">
+           <h1>{$article.title}</h1>
+           <div class="article-detail-labels">
+               {foreach $article['label'] as $label_key=>$label}
+               <span class="article-detail-label-item">{$label}</span>
+               {/foreach}
+           </div>
+           <div class="article-detail-meta">
+               <a href="{:url('/articles'.$article.cid)}">{$article.category.title}</a>
+               <span><i class="el-icon-view"></i>浏览量：{$article.visit}</span>
+               <span><i class="el-icon-time"></i>发布时间：{$article.add_time}</span>
+           </div>
+           <div class="article-detail-content">
+               {$article.content}
+           </div>
+       </div>
+       <aside style="width: 360px">
+           <div class="recommend" style="margin-top: 0">
+               <div class="recommend-box">
+                   <div class="recommend-tt">相关推荐</div>
+                   <ul class="course-list agency">
+                       {foreach $recommend_list as $key=>$item}
+                       <li>
+                           <section class="course-card-expo-wrapper">
+                               <a class="kc-course-card" href="{:url('/view-article/'.$item['id'])}">
+                                   <div class="kc-course-card-cover" style="background-image: url({:str_replace('\\\\','/',get_image_src($item.image_input))})"></div>
+                                   <div class="kc-course-card-content">
+                                       <h3 class="kc-course-card-name" title="{$item.title}">{$item.title}</h3>
+                                       <div class="kc-course-card-footer" style="margin-top: 15px;">
+                                           <div class="kc-coursecard-footer-left">
+                                               <span class="kc-course-card-student">{$item.visit}人观看</span>
+                                           </div>
+                                       </div>
+                                   </div>
+                               </a>
+                           </section>
+                       </li>
+                       {/foreach}
+                   </ul>
+               </div>
+           </div>
+       </aside>
+   </div>
+</div>
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{include file='public/footer' /}
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'api/article',
+        'scripts/util'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, articleApi, util) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin],
+            data: {
+                articleDetails: {}
+            },
+            created: function () {
+                this.article_details();
+            },
+            methods: {
+                article_details: function () {
+                    articleApi.article_details({
+                        id: 4
+                    }).then(function (res) {
+                        vm.articleDetails = res.data;
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    {include file="public/head" /}
+    <title>{block name="title"}{$public_data.site_name}{/block}</title>
+    <meta name="keywords" content="{$seo_keywords}">
+    <meta name="description" content="{$seo_description}">
+    <link rel="icon" href="{$site_favicon}" type="image/png">
+
+    {if (config('is_lan') == false)}
+    <link rel="stylesheet" href="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/skins/default/aliplayer-min.css" />
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/aliplayer-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-vod-p-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-vod-min.js"></script>
+    <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-hls-min.js"></script>
+    {else}
+    <link rel="stylesheet" href="{$img_domain}static/aliplayer/aliplayer-min.css" />
+    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-min.js"></script>
+    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-vod-p-min.js"></script>
+    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-vod-min.js"></script>
+    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-hls-min.js"></script>
+    {/if}
+
+    {if ($slide_captcha == 1)}
+    <link rel="stylesheet" type="text/css" href="{$img_domain}static/captcha/css/verify.css">
+    <script type="text/javascript" src="{$img_domain}static/captcha/js/jquery.min.js" ></script>
+    <script type="text/javascript" src="{$img_domain}static/captcha/js/crypto-js.js"></script>
+    <script type="text/javascript" src="{$img_domain}static/captcha/js/ase.js"></script>
+    <script type="text/javascript" src="{$img_domain}static/captcha/js/verify.js"></script>
+    <script type="text/javascript">
+        var slide_captcha = {$slide_captcha};
+        var slide_captcha_api = "{$slide_captcha_api}";
+    </script>
+    {/if}
+
+    <script type="text/javascript">
+        var login_types = {$login_types};
+        var img_domain = "{$img_domain}";
+        function fx_cdn_img(src) {
+            if (!src) return;
+            let domain = img_domain;
+            // 判断url开头是否是http
+            if (src.indexOf('http') === 0) {
+                domain = ''
+            }
+            return domain + src;
+        }
+    </script>
+
+    {if condition="($public_data.service_url != '') AND ($public_data.kefu_token != '')"}
+    {in name="fxchat_value" value="$public_data.pc_customer_service"}
+    <script type="text/javascript" src="{$public_data.service_url}/wy-chat-wp.js"></script>
+    <script>
+        var wy_im_option = {
+            enable: true,
+            fast: true,
+            siteUrl: '{$public_data.service_url}',
+            token: '{$public_data.kefu_token}',
+            mobileIcon: '',
+            pcIcon: '',
+            chatPosition: '',
+            domId: 'wy-chat-im',
+            showButton: false,
+            showAD: 1,
+            autoOpen: true,
+            interval: '{$public_data.kefu_interval}',
+        };
+        var wyChatInstance = new initFxChat(wy_im_option);
+        wyChatInstance.init();
+        (function () {
+            function setCookie(c_name, value, expire, path){
+                var exdate=new Date();
+                exdate.setTime(exdate.getTime() + expire * 1000);
+                document.cookie= c_name+ "=" +escape(value)+((expiredays==null) ? "" : ";expires="+exdate.toGMTString())+((path==null) ? "" : ";path="+path);
+            }
+            function getCookie(c_name){
+                if (document.cookie.length>0){
+                    c_start=document.cookie.indexOf(c_name + "=");
+                    if (c_start!=-1){
+                        c_start=c_start + c_name.length+1;
+                        c_end=document.cookie.indexOf(";",c_start);
+                        if (c_end==-1)
+                            c_end=document.cookie.length;
+                        return unescape(document.cookie.substring(c_start,c_end));
+                    }else{
+                        return "";
+                    }
+                }
+                return "";
+            }
+            var chatInterval = null;
+            if (window.wy_im_option.autoOpen) {
+                wyChatInstance.getFxChat();
+            }
+            $chat.on('openChatWin', function (e) {
+                if (window.wy_im_option.autoOpen && chatInterval) {
+                    clearInterval(chatInterval);
+                }
+            })
+            $chat.on('closeWindow', function (e) {
+                if (window.wy_im_option.autoOpen) {
+                    chatInterval = setInterval(function () {
+                        wyChatInstance.getFxChat();
+                    }, window.wy_im_option.interval * 1000);
+                }
+            })
+
+        })()
+    </script>
+    {/in}
+    {/if}
+
+    {include file="public/style" /}
+    {include file="public/require" /}
+    {block name="style"}{/block}
+</head>
+<body>
+    <div v-cloak id="app">
+        {block name="app"}{/block}
+    </div>
+    {block name="vm"}{/block}
+    {$website_statistics}
+</body>
+</html>

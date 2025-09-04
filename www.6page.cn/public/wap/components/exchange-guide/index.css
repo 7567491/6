@@ -1,0 +1,11 @@
+.pinTip2.exchange{
+    background-color: #e2fff0;
+}
+.pinTip2.exchange .reminder {
+    color: #00b103;
+}
+.pinTip2.exchange .chatBnt {
+    border: 1px solid #00b103;
+    background-color: #00b103;
+    color: #ffffff;
+}

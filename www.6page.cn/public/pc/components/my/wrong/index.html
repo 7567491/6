@@ -1,0 +1,96 @@
+<div class="my-exam">
+    <h1 class="my-title" style="margin-bottom: 20px">我的错题</h1>
+    <el-tabs v-model="activeTab" @tab-click="changeTab">
+        <el-tab-pane label="全部" name="all">
+            <div class="my-wrong-list">
+                <ul class="wy-test-list">
+                    <li v-for="item in wrongList" :key="item.id">
+                        <a :href="router.view_wrong + '?id=' + item.id">
+                            <div class="wy-test-title">
+                                {{ item.stem }}
+                            </div>
+                            <div class="wy-test-info">
+                                <div class="wy-test-meta">
+                                    <div class="wy-test-people">
+                                        来源：{{ item.title }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        题型：{{ item.question_type_text }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        {{ item.is_master ? '已掌握' : '未掌握' }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <el-button type="default" round size="small">查看错题</el-button>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane label="未掌握" name="notmastered">
+            <div class="my-wrong-list">
+                <ul class="wy-test-list">
+                    <li v-for="item in wrongList" :key="item.id">
+                        <a :href="router.view_wrong + '?id=' + item.id">
+                            <div class="wy-test-title">
+                                {{ item.stem }}
+                            </div>
+                            <div class="wy-test-info">
+                                <div class="wy-test-meta">
+                                    <div class="wy-test-people">
+                                        来源：{{ item.title }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        题型：{{ item.question_type_text }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        {{ item.is_master ? '已掌握' : '未掌握' }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <el-button type="default" round size="small">查看错题</el-button>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane label="已掌握" name="mastered">
+            <div class="my-wrong-list">
+                <ul class="wy-test-list">
+                    <li v-for="item in wrongList" :key="item.id">
+                        <a :href="router.view_wrong + '?id=' + item.id">
+                            <div class="wy-test-title">
+                                {{ item.stem }}
+                            </div>
+                            <div class="wy-test-info">
+                                <div class="wy-test-meta">
+                                    <div class="wy-test-people">
+                                        来源：{{ item.title }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        题型：{{ item.question_type_text }}
+                                    </div>
+                                    <div class="wy-test-people">
+                                        {{ item.is_master ? '已掌握' : '未掌握' }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <el-button type="default" round size="small">查看错题</el-button>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </el-tab-pane>
+    </el-tabs>
+    <el-empty v-if="wrongList.length==0 && loaded" image="/pc/images/empty4.png" description="暂无错题～"></el-empty>
+    <div v-if="wrongList.length" class="pagination">
+        <el-pagination layout="prev, pager, next" :total="count" :page-size="limit" :current-page.sync="page"></el-pagination>
+    </div>
+</div>

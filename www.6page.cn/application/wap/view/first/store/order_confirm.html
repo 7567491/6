@@ -1,0 +1,357 @@
+
+{extend name="public/container"}
+{block name="title"}提交订单-{$Auth_site_name?$Auth_site_name:''}{/block}
+{block name="head_top"}
+<style>
+    body {
+        padding-bottom: 1.12rem;
+        background-color: #f5f5f5;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="order-confirm">
+        <div class="contact" @click="addressCheck">
+            <div>
+                <template v-if="addressChecked">
+                    <template v-for="item in address">
+                        <template v-if="item.id === addressChecked">
+                            <div :key="item.id">
+                                <span>{{ item.real_name }}</span>
+                                <span>{{ item.phone }}</span>
+                            </div>
+                            <div class="address">
+                                <span>[默认]</span>
+                                <span>{{ item.province }}{{ item.city }}{{ item.district }}{{ item.detail }}</span>
+                            </div>
+                        </template>
+                    </template>
+                </template>
+                <template v-else>选择收货地址</template>
+            </div>
+            <div class="iconfont iconxiangyou"></div>
+        </div>
+        <div class="panel">
+            <div v-for="(item, index) in cartInfo" :key="index" class="goods">
+                <div class="image">
+                    <img class="img" :src="item.productInfo.image">
+                </div>
+                <div class="text">
+                    <div class="name">{{ item.productInfo.store_name }}</div>
+                    <div class="group">
+                        <div class="money">
+                            <div class="price">￥
+                                <span v-if="level">{{ item.productInfo.vip_price }}</span>
+                                <span v-else>{{ item.productInfo.price }}</span>
+                            </div>
+                        </div>
+                        <div class="spinner">
+                            <button type="button" :disabled="number == 1" @click="number--">-</button>
+                            <input v-model.number="number"  readonly>
+                            <button type="button" :disabled="number == item.productInfo.stock"
+                                @click="number++">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="postage">
+                <div class="name">邮费</div>
+                <div class="value">{{ postage }}</div>
+            </div>
+            <div class="remark">
+                <div class="name">备注信息</div>
+                <textarea class="textarea" v-model="signs.mark" rows="4" placeholder="选填备注信息"></textarea>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="text">共{{ number }}件，合计：<div class="money"><span>￥</span>{{ total }}</div>
+            </div>
+            <button type="button" @click="pay">立即结算</button>
+        </div>
+        <div :class="{ mask: popupShow }" @click="popupShow = false"></div>
+        <!-- 地址弹窗 -->
+        <div class="popup" :class="{ on: popupShow }">
+            <button type="button" @click="popupShow = false"></button>
+            <div class="head">选择地址</div>
+            <div class="cont">
+                <label v-for="item in address" :key="item.id">
+                    <input v-model="addressChecked" :value="item.id" type="radio" name="address" hidden>
+                    <div>
+                        <div>{{ item.real_name }} {{ item.phone }}</div>
+                        <div>{{ item.province }}{{ item.city }}{{ item.district }}{{ item.detail }}</div>
+                    </div>
+                </label>
+            </div>
+            <div class="foot">
+                <a @click="go_address">选择其他地址</a>
+            </div>
+        </div>
+        <payment
+            :payment="payment"
+            :signs="signs"
+            :money="totals"
+            :now_money="now_money"
+            :special_id="addressChecked"
+            :pay_type_num="pay_type_num"
+            :is-wechat="isWechat"
+            :is-alipay="is_alipay"
+            :is-balance="isyue"
+            :template-id="templateId"
+            :wxpay-h5="wxpayH5"
+            @change="changeVal"
+        ></payment>
+        <base-login :login-show="loginShow" :site-name="site_name" @login-close="logComplete"></base-login>
+        <quick-menu></quick-menu>
+    </div>
+</div>
+<script>
+    require(['vue', 'store', 'helper', 'payment', 'components/base_login/index', 'quick'], function (Vue, api, $h, payment, BaseLogin) {
+        var cartInfo = {$cartInfo};
+        var cartId = {$cartId};
+        var priceGroup = {$priceGroup};
+        var orderKey = '{$orderKey}';
+        var userInfo = {$userInfo};
+        var now_money={$now_money};
+        var is_yue={$is_yue ? 'true' : 'false'};
+        var site_name = '{$Auth_site_name}';
+        var isWechat={$isWechat ? 'true' : 'false'};
+        var is_alipay={$is_alipay ? 'true' : 'false'};
+        var level={$level ? 'true' : 'false'};
+        var wxpayH5={$is_h5_wechat_payment_switch ? 'true' : 'false'};
+        var callback_url = '{$callback_url}';
+        var app = new Vue({
+            el: '#app',
+            components: {
+                payment: payment,
+                'base-login': BaseLogin
+            },
+            data: {
+                isWechat: isWechat,
+                loginShow: false,
+                url: isWechat ? $h.U({c:'index',a:'login'}):$h.U({c:'login',a:'phone_check'}),
+                site_name: site_name,
+                payment: true,
+                pay_type_num: 40,
+                pinkId: '',
+                link_pay_uid: '',
+                isyue: is_yue, //余额是否开启
+                is_alipay: is_alipay, //支付宝是否开启
+                now_money: now_money, //余额
+                cartId: cartId,
+                cartInfo: cartInfo,
+                priceGroup: priceGroup,
+                userInfo: userInfo,
+                popupShow: false,
+                number: cartInfo ? cartInfo[0].cart_num : 1,
+                totalPrice: 0,
+                address: [],
+                addressChecked: 0,
+                totals: 0,
+                postages: 0,
+                signs:{
+                    key: orderKey,
+                    mark: ''
+                },
+                templateId: '',
+                wxpayH5: wxpayH5,
+                level: level
+            },
+            computed: {
+                total: function () {
+                    if (!this.cartInfo) {
+                        return;
+                    }
+                    var price = 0;
+                    if(level){
+                        price =this.cartInfo[0].productInfo.vip_price;
+                    }else{
+                        price =this.cartInfo[0].productInfo.price;
+                    }
+                    this.totals = $h.Mul(price, this.number);
+                    this.totals = $h.Add(this.totals, this.postages);
+                    return this.totals.toFixed(2);
+                },
+                postage: function () {
+                    if (!this.cartInfo) {
+                        return;
+                    }
+                    if (this.cartInfo[0].productInfo.is_postage || this.cartInfo[0].productInfo.free_shipping>0 && this.cartInfo[0].productInfo.free_shipping <= this.number) {
+                        this.postages = 0;
+                        return '包邮';
+                    }
+                    this.postages = this.cartInfo[0].productInfo.postage;
+                    return '￥' + this.postages;
+                }
+            },
+            watch: {
+                addressChecked: function () {
+                    this.popupShow = false;
+                    this.subscribeTemplate();
+                }
+            },
+            created: function () {
+                this.getAddress();
+            },
+            methods: {
+                subscribeTemplate: function () {
+                    api.baseGet($h.U({
+                        c: 'special',
+                        a: 'getTemplateIds',
+                        q: {
+                            pay_type_num: this.pay_type_num,
+                            special_id: this.addressChecked
+                        }
+                    }), function (res) {
+                        this.templateId = res.data.msg;
+                    }.bind(this));
+                },
+                getAddress: function () {
+                    $h.loadFFF();
+                    api.baseGet($h.U({ c: 'auth_api', a: 'user_address_list' }), function (res) {
+                        $h.loadClear();
+                        var data = res.data.data;
+                        this.address = data;
+                        var result = data.find(function (value) {
+                            return value.is_default;
+                        }.bind(this));
+                        if (result) {
+                            this.addressChecked = result.id;
+                        }
+                    }.bind(this), function (err) {
+                        $h.loadClear();
+                        console.error(err.data.msg);
+                    }.bind(this));
+                },
+                addressCheck: function () {
+                    if (this.address.length) {
+                        this.popupShow = true;
+                    } else {
+                       this.go_address();
+                    }
+                },
+                go_address:function(){
+                    this.getOrderPrice(1);
+                },
+                getOrderPrice: function (n) {
+                    $h.loadFFF();
+                    api.baseGet($h.U({
+                        c: 'special',
+                        a: 'getOrderPrice',
+                        q: {
+                            cartId: this.cartId,
+                            cateNum: this.number,
+                            price: this.totals,
+                            postage: this.postages
+                        }
+                    }), function (res) {
+                        $h.loadClear();
+                        if(n){
+                            window.location = "{:url('/m/edit-address')}" + '?cartId=' + this.cartId
+                        }else{
+                            var data = res.data.data;
+                            this.signs.key = data.orderKey;
+                            this.priceGroup = data.priceGroup;
+                            this.payment = false;
+                        }
+                    }.bind(this), function (err) {
+                        $h.loadClear();
+                    }.bind(this));
+                },
+                pay: function () {
+                    if (!this.addressChecked) {
+                        return $h.pushMsg('请选择收货地址');
+                    }
+                    $h.loadFFF();
+                    api.baseGet($h.U({ c: 'index', a: 'user_login' }), function (res) {
+                        $h.loadClear();
+                        this.getOrderPrice(0);
+                    }.bind(this), function (err) {
+                        $h.loadClear();
+                        this.loginShow = true;
+                    }.bind(this));
+                },
+                pay_order:function(data){
+                    this.orderId=data.data.result.orderId || '';
+                    switch (data.data.status){
+                        case "PAY_ERROR":case 'ORDER_EXIST':case 'ORDER_ERROR':
+                            this.extendOrder(data.msg);
+                            break;
+                        case 'WECHAT_PAY':
+                            this.wechatPay(data.data.result.jsConfig);
+                            break;
+                        case 'WECHAT_H5_PAY':
+                            this.payment = true;
+                            var callbackUrl = callback_url + '?type=2&id=0';
+                            var mwebUrl = data.data.result.jsConfig.mweb_url + '&redirect_url=' + encodeURIComponent(callbackUrl);
+                            window.location.href = mwebUrl;
+                            break;
+                        case 'SUCCESS':
+                            this.successOrder(data.msg);
+                            break;
+                        case 'ZHIFUBAO_PAY':
+                            window.location=$h.U({m:'wap',c:'alipay',a:'index',q:{info:data.data.result,params:'goods'}});
+                            break;
+                    }
+                },
+                wechatPay:function(config){
+                    var that = this;
+                    mapleWx($jssdk(),function(){
+                        this.chooseWXPay(config,function(){
+                            that.successOrder();
+                        },{
+                            fail:that.extendOrder,
+                            cancel:that.extendOrder
+                        });
+                    });
+                },
+                successOrder:function(msg){
+                    $h.showMsg({
+                        title:msg ? msg :'支付成功',
+                        icon:'success',
+                        success:function (){
+                            window.location = "{:url('/m/my-order')}?type=1";
+                        }
+                    });
+                },
+                extendOrder:function(msg){
+                    if (typeof msg === 'object') {
+                        if (msg.errMsg === 'chooseWXPay:cancel') {
+                            msg = '微信支付取消';
+                        } else {
+                            msg = '支付失败';
+                        }
+                    } else {
+                        msg = '支付失败';
+                    }
+                    $h.pushMsg(msg, function () {
+                        window.location = "{:url('/m/my-order')}?type=0";
+                    });
+                },
+                //关闭支付
+                payClose:function(value){
+                    this.payment=value;
+                },
+                enter: function () {
+                    this.loginShow = true;
+                },
+                //关闭登录
+                loginClose:function(value){
+                    this.loginShow=false;
+                    value && this.logComplete();
+                },
+                //登录完成回调事件
+                logComplete:function(){
+                    this.loginShow=false;
+                },
+                changeVal: function (opt) {
+                    if (typeof opt != 'object') opt = {};
+                    var action = opt.action || '';
+                    var value = opt.value || '';
+                    this[action] && this[action](value);
+                }
+            }
+        });
+    });
+</script>
+{/block}

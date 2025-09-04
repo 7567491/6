@@ -1,0 +1,175 @@
+
+{extend name="public/container"}
+{block name="title"}我的证书-{$Auth_site_name}{/block}
+{block name="head"}
+<style>
+    body {
+        background-color: rgba(0, 0, 0, .6);
+        font-size: .24rem;
+        text-align: center;
+        color: #cecece;
+    }
+
+    .poster {
+        width: 6rem;
+        margin-top: 1.92rem;
+        margin-bottom: .5rem;
+        vertical-align: middle;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <img :src="imgSrc" class="poster">
+    <div v-show="imgSrc">长按图片，保存至手机</div>
+    <div v-if="empty" style="font-size: 24px; background-color: #fff; border-radius: 5px; display: inline-block; padding: 10px; color: #333">证书不存在</div>
+    <div id="qrcode" style="display: none"></div>
+{include file="public/store_menu"}
+</div>
+<script>
+    require([
+        'vue',
+        'helper',
+        'store',
+        'moment',
+        'qrcode',
+        'quick',
+    ], function (Vue, $h, $http, moment, QRCode) {
+        var userInfo = {:json_encode($userInfo)};
+        var site_url = '{$site_url}';
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                nickname: "{$userInfo['nickname'] ? $userInfo['nickname'] : '--'}",
+                loading: false,
+                certificate: null,
+                imgSrc: '',
+                empty: false,
+                emptyMsg: '',
+            },
+            watch: {
+                loading: function (loading) {
+                    loading ? $h.loadFFF() : $h.loadClear();
+                },
+                certificate: function (certificate) {
+                    this.createCertificate(certificate);
+                }
+            },
+            created: function () {
+                this.getCertificateDetail();
+            },
+            methods: {
+                getCertificateDetail: function () {
+                    this.loading = true;
+                    $http.baseGet($h.U({
+                        c: 'topic',
+                        a: 'viewCertificate',
+                        q: {
+                            id: $h.getParmas('id'),
+                            obtain: $h.getParmas('obtain'),
+                            uid: $h.getParmas('uid') ? $h.getParmas('uid') : 0
+                        }
+                    }), function (res) {
+                        vm.loading = false;
+                        vm.certificate = res.data.data;
+                    }, function (err) {
+                        vm.loading = false;
+                        vm.empty = true;
+                        vm.emptyMsg = err;
+                        $h.pushMsg(err, function () {
+                            // history.back();
+                        });
+                    });
+                },
+                createCertificate: function (certificate) {
+                    this.loading = true;
+                    var promiseArr = [];
+                    for (var key in certificate.certificate) {
+                        if (Object.hasOwnProperty.call(certificate.certificate, key)) {
+                            switch (key) {
+                                case 'background':
+                                    promiseArr.push(new Promise(function (resolve, reject) {
+                                        var image = new Image();
+                                        image.crossOrigin = 'anonymous';
+                                        image.src = certificate.certificate[key] + '?' + new Date().getTime();
+                                        image.onload = function () {
+                                            resolve(image);
+                                        };
+                                        image.onerror = function () {
+                                            reject('error-' + key);
+                                        }
+                                    }));
+                                    break;
+                                case 'qr_code':
+                            }
+                        }
+                    }
+                    Promise.all(promiseArr).then(function (imageArr) {
+                        var canvas = document.createElement('canvas'),
+                            context = canvas.getContext('2d');
+                        canvas.width = imageArr[0].width;
+                        canvas.height = imageArr[0].height;
+
+                        // 背景
+                        context.drawImage(imageArr[0], 0, 0);
+
+                        // 二维码
+                        var qrcode_url = site_url + '/m/view-certificate.html?obtain=' + vm.certificate.obtain + '&id=' + vm.certificate.id + '&uid=' + vm.certificate.uid
+                        var qrcode = new QRCode("qrcode", {
+                            text: qrcode_url,
+                            width: 200,
+                            height: 200,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff"
+                        });
+                        var qrcode_canvas = document.getElementById("qrcode").getElementsByTagName('canvas')[0];
+                        context.drawImage(qrcode_canvas, 220, 557, 160, 160);
+
+                        context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        context.fillRect(220, 724, 160, 36);
+
+                        context.font = 'bold 34px sans-serif';
+                        context.textAlign = 'center';
+                        context.fillStyle = '#000';
+                        context.fillText(vm.certificate.full_name, 300, 296);
+
+                        context.font = '24px sans-serif';
+                        context.fillText('颁发时间：' + moment(vm.certificate.add_time * 1000).format('YYYY.MM.DD'), 300, 490);
+
+                        context.font = '20px sans-serif';
+                        context.fillStyle = '#666666';
+                        context.fillText('扫一扫验真伪', 300, 748);
+
+                        context.font = '28px sans-serif';
+                        context.textAlign = 'start';
+                        context.fillStyle = '#333333';
+
+                        var lineWidth = 0;
+                        var substringFrom = 0;
+                        var offsetTop = 364;
+                        for (var i = 0; i < vm.certificate.certificate.explain.length; i++) {
+                            lineWidth += context.measureText(vm.certificate.certificate.explain[i]).width;
+                            if (lineWidth > 434) {
+                                context.fillText(vm.certificate.certificate.explain.substring(substringFrom, i), 83, offsetTop);
+                                lineWidth = 0;
+                                substringFrom = i;
+                                offsetTop += 50;
+                            }
+                            if (i == vm.certificate.certificate.explain.length - 1) {
+                                context.fillText(vm.certificate.certificate.explain.substring(substringFrom, i), 83, offsetTop);
+                            }
+                        }
+
+                        vm.imgSrc = canvas.toDataURL('image/jpeg');
+                        vm.loading = false;
+                        canvas = null;
+                    }).catch(function (err) {
+                        vm.loading = false;
+                        $h.pushMsg(err);
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

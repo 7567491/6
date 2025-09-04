@@ -1,0 +1,43 @@
+<div class="my-exam">
+    <h1 class="my-title">我的考试</h1>
+    <div class="my-exam-wrapper">
+        <div v-if="examList.length" class="switch-panel">
+            <div class="recommend wy-exam">
+                <ul>
+                    <li v-for="(item, index) in examList" :key="item.id" @click="goQuestion(item)">
+                        <section class="course-card-expo-wrapper">
+                            <a class="kc-course-card" href="javascript:;">
+                                <div class="kc-course-card-cover" :style="{'background-image': 'url('+replace_url(item.image)+')'}"></div>
+                                <div class="kc-course-card-content">
+                                    <h3 class="kc-course-card-name" :title="item.title">
+                                        {{ item.title }}
+                                    </h3>
+                                    <div class="kc-course-card-footer">
+                                        <div class="kc-coursecard-footer-left">
+                                            <span class="kc-course-card-student">共{{ item.item_number }}题</span>
+                                            <div class="wy-exam-price-box">
+                                                <span class="kc-course-card-price">
+                                                    <span>{{ item.number ? '已完成' : '未完成' }}</span>
+                                                </span>
+                                            </div>
+                                            <div class="wy-exam-go">
+                                                <a class="el-button el-button--primary el-button--mini is-round" v-if="item.number" :href="router.exam + '?id=' + item.test_id">再次答题</a>
+                                                <a class="el-button el-button--primary el-button--mini is-round" :href="router.exam_result + '?from=question_user&test_id=' + item.test_id+'&type=2'" v-if="item.number>0">答题结果</a>
+                                                <a class="el-button el-button--primary el-button--mini is-round" :href="router.exam + '?id=' + item.test_id" v-else>开始答题</a>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </section>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <el-empty v-if="examList.length==0 && loaded" image="/pc/images/empty4.png" description="暂无考试～"></el-empty>
+    <div v-if="examList.length" class="pagination">
+        <el-pagination layout="prev, pager, next" :total="count" :page-size="limit" :current-page.sync="page"></el-pagination>
+    </div>
+</div>

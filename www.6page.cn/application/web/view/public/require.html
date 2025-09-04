@@ -1,0 +1,77 @@
+<script src="{$img_domain}pc/requirejs/require.js"></script>
+<script>
+    require.config({
+        urlArgs: 'bust=' + (new Date()).getTime(),
+        baseUrl: '{$img_domain}pc',
+        map: {
+            '*': {
+                'css': 'plugins/require-css/css'
+            }
+        },
+        shim: {
+            'ELEMENT': {
+                deps: [
+                    'vue',
+                    'css!element-ui/lib/theme-chalk/index.css',
+                    'css!styles/element-ui.css'
+                ]
+            },
+            'swiper': {
+                deps: [
+                    'css!plugins/swiper/css/swiper.min.css'
+                ]
+            },
+            'qrcode': {
+                exports: 'QRCode'
+            }
+        },
+        paths: {
+            'vue': 'vue/dist/vue.min',
+            'ELEMENT': 'element-ui/lib/index',
+            'text': 'plugins/text/text',
+            'axios': 'plugins/axios/dist/axios.min',
+            'swiper': 'plugins/swiper/js/swiper.min',
+            'qrcode': 'plugins/qrcodejs/qrcode.min',
+            'components': 'components'
+        }
+    });
+    var router = {
+        home: "{:url('/index')}",
+        user: "{:url('/my')}",
+        live: "{:url('/live')}",
+        live_room: "{:url('/live-room')}",
+        course: "{:url('/course')}",
+        view_course: "{:url('/view-course')}",
+        single_course: "{:url('/single-course')}",
+        virtual: "{:url('/virtual')}",
+        view_virtual: "{:url('/view-virtual')}",
+        articles: "{:url('/articles')}",
+        view_article: "{:url('/view-article')}",
+        teachers: "{:url('/teachers')}",
+        view_teacher: "{:url('/view-teacher')}",
+        lesson: "{:url('/lesson')}",
+        all_exam: "{:url('/all-exam')}",
+        exam: "{:url('/exam')}",
+        exam_result: "{:url('/exam-result')}",
+        all_test: "{:url('/all-test')}",
+        test: "{:url('/test')}",
+        test_result: "{:url('/test-result')}",
+        view_wrong: "{:url('/view-wrong')}",
+        view_certificate: "{:url('/view-certificate')}",
+
+        special_live: "{:url('/live')}",
+        special_cate: "{:url('/course')}",
+        special_details: "{:url('/view-course')}",
+        single_details: "{:url('/single-course')}",
+        task_info: "{:url('/lesson')}",
+        material_list: "{:url('material/material_list')}",
+        material_details: "{:url('/view-virtual')}",
+        news_list: "{:url('/articles')}",
+        news_detail: "{:url('/view-article')}",
+        payment: "{:url('/pay')}",
+        teacher_list: "{:url('/teachers')}",
+        teacher_detail: "{:url('/view-teacher')}",
+        more_list: "{:url('index/more_list')}"
+    };
+    var code_url = "{$code_url}";
+</script>

@@ -1,0 +1,227 @@
+{extend name="public/container"}
+{block name="title"}错题解析-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-header">
+        <div class="master-status" :class="{yes: question.is_master, no: !question.is_master}">
+            {{ question.is_master ? '已掌握' : '未掌握' }}
+        </div>
+        <a href="{:url('/my')}?page=wrong" class="el-button el-button--default el-button--small">
+            <i class="el-icon-notebook-2"></i> 返回我的错题
+        </a>
+    </div>
+    <div class="swiper-container test-question">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide">
+                <div class="test-question-desc">
+                    <div class="test-question-title">
+                        <span class="test-question-type">{{ question.question_type | covertType }}</span>{{ question.stem }}
+                    </div>
+                    <img class="test-question-img" v-if="question.image" :src="fx_cdn_img(question.image)">
+                    <div :class="{ image: question.is_img }" class="test-question-label-group">
+                        <template v-for="option in question.options">
+                            <label :class="{ right: question.is_correct && option.right , wrong: question.is_correct && !option.right && (option.key === question.user_answer || question.user_answer.indexOf(option.key) !== -1)}" v-if="option.value" :key="option.key">
+                                <input v-if="question.question_type === 2" v-model="question.user_answer" :value="option.key" type="checkbox" disabled>
+                                <input v-else v-model="question.user_answer" :value="option.key" type="radio" disabled>
+                                <div class="test-question-option">
+                                    <img v-if="question.is_img" :src="fx_cdn_img(option.value)">
+                                    <template v-else>{{ option.value }}</template>
+                                    <i class="el-icon-circle-check" v-show="question.is_correct && option.right"></i>
+                                    <i class="el-icon-circle-close" v-show="question.is_correct && !option.right && (option.key === question.user_answer || question.user_answer.indexOf(option.key) !== -1)"></i>
+                                </div>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+                <div class="test-analysis">
+                    <div class="test-analysis-status wrong">
+                        <i class="el-icon-circle-close"></i>回答错误
+                    </div>
+                    <div class="test-analysis-answer">
+                        <span>正确答案：<em>{{ question.answer }}</em></span>
+                        <span>您的答案：<em>{{ question.user_answer && question.user_answer.toString() }}</em></span>
+                    </div>
+                    <div class="test-question-star">
+                        试题难度：
+                        <el-rate
+                                :value="question.difficulty"
+                                disabled
+                                show-score
+                                text-color="#ff9900"
+                                score-template="{value}星">
+                        </el-rate>
+                    </div>
+                    <div class="test-analysis-title">答案解析：</div>
+                    <div class="test-analysis-content" v-html="question.analysis"></div>
+                    <div v-if="question.special.length" class="test-knowledge-title">关联知识点：</div>
+                    <ul v-if="question.special && question.special.length" class="test-knowledge-list">
+                        <li
+                                class="test-knowledge-item"
+                                v-for="special in item.special"
+                                :key="special.id"
+                        >
+                            <a
+                                    :href="(special.is_light ? '{:url('/single-course')}' : '{:url('/view-course')}') + '?id=' + special.id"
+                            >{{ special.title }}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="test-question-button-group">
+        <el-button type="primary" round @click="submitQuestion">{{ question.is_master ? '标记为未掌握' : '标记为已掌握' }}</el-button>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'scripts/util',
+        'api/auth',
+        'mixins/router'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, util, authApi, routerMixin) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            filters: {
+                questionType: function (value) {
+                    switch (value) {
+                        case 1:
+                            return '单选题';
+                            break;
+                        case 2:
+                            return '多选题';
+                            break;
+                        default:
+                            return '判断题';
+                            break;
+                    }
+                },
+                formatTime: function (time) {
+                    var hour = Math.floor(time / 3600000);
+                    var minute = Math.floor((time - hour * 3600000) / 60000);
+                    var second = Math.floor((time - hour * 3600000 - minute * 60000) / 1000);
+
+                    if (hour < 10) {
+                        hour = '0' + hour;
+                    }
+                    if (minute < 10) {
+                        minute = '0' + minute;
+                    }
+                    if (second < 10) {
+                        second = '0' + second;
+                    }
+
+                    return hour + ':' + minute + ':' + second;
+                }
+            },
+            data: {
+                question: {},
+                id: '',
+                is_master: 0
+            },
+            created: function () {
+                this.id = util.getParmas('id');
+                this.is_master = parseInt(util.getParmas('is_master'));
+                this.getQuestion();
+            },
+            methods: {
+                getQuestion: function () {
+                    authApi.view_my_wrong({
+                        id: this.id
+                    }).then(function (res) {
+                        var question = res.data;
+                        var option = JSON.parse(question.option);
+
+                        question.options = [];
+
+                        var answers = question.answer.split(',');
+
+                        if (Array.isArray(option)) {
+                            option.forEach(function (item, index) {
+                                var right = false;
+
+                                for (var j = answers.length; j--;) {
+                                    if (answers[j] === String.fromCharCode(index + 65)) {
+                                        right = true;
+                                        break;
+                                    }
+                                }
+
+                                question.options.push({
+                                    right: right,
+                                    key: String.fromCharCode(index + 65),
+                                    value: item
+                                });
+                            });
+                        } else {
+                            for (var key in option) {
+                                if (Object.hasOwnProperty.call(option, key)) {
+                                    var right = false;
+
+                                    for (var j = answers.length; j--;) {
+                                        if (answers[j] === key) {
+                                            right = true;
+                                            break;
+                                        }
+                                    }
+
+                                    question.options.push({
+                                        right: right,
+                                        key: key,
+                                        value: option[key]
+                                    });
+                                }
+                            }
+                        }
+
+                        if ('user_answer' in question) {
+                            if (2 === question.question_type) {
+                                question.user_answer = question.user_answer.split(',');
+                            }
+                        } else {
+                            question.user_answer = 2 === question.question_type ? [] : '';
+                        }
+
+                        vm.question = question;
+                    })
+                },
+                submitQuestion: function () {
+                    authApi.mark_my_wrong({
+                        wrong_id: this.id,
+                        questions_id: this.question.questions_id,
+                        is_master: this.question.is_master ? 0 : 1
+                    }).then(function (res) {
+                        vm.question.is_master = vm.question.is_master ? 0 : 1;
+                    })
+                }
+            }
+        })
+    })
+</script>
+{/block}

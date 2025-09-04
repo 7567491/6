@@ -1,0 +1,93 @@
+.my-coin {
+}
+
+.my-coin .total ul {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: flex;
+    font-size: 14px;
+    color: #969696;
+}
+
+.my-coin .total li ~ li {
+    margin-left: 170px;
+}
+
+.my-coin .total li > div:last-child {
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 32px;
+    color: #282828;
+}
+.my-coin .spread-list{
+    margin-top: 20px;
+    width: 921px;
+}
+.spread-item-section{
+    margin-bottom: 20px;
+}
+.spread-section .spread-item-section:first-child .spread-cate-name{
+    margin-top: 0;
+}
+.spread-cate-name{
+    font-weight: bold;
+    margin-bottom: 10px;
+    margin-top: 20px;
+    font-size: 16px;
+}
+.spread-item{
+    display: flex;
+    margin-bottom: 20px;
+}
+.spread-img{
+    width: 214px;
+    height: 120px;
+    flex: 0 0 214px;
+    border-radius: 10px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.spread-data{
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.spread-data h3{
+    font-size: 14px;
+}
+.spread-price{
+    font-size: 16px;
+    color: #ff0000;
+    margin-bottom: 10px;
+}
+.spread-price span{
+    margin-left: 10px;
+    font-size: 14px;
+    background-color: #ff0000;
+    color: #fff;
+    padding: 0 5px;
+    border-radius: 5px;
+}
+.spread-tips{
+    padding: 20px;
+    background-color: #f3f5f6;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+.spread-tips h4{
+    color: #000;
+}
+.spread-tips-import {
+    color: #000;
+}
+.spread-tips ul{
+    margin-top: 10px;
+    list-style: disc;
+    list-style-position: inside;
+    line-height: 1.6;
+    color: #666;
+}

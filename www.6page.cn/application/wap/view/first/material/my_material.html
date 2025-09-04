@@ -1,0 +1,85 @@
+
+{extend name="public/container"}
+{block name="title"}我的资料-{$Auth_site_name}{/block}
+{block name="content"}
+<style>
+    body{
+        background-color: #f5f5f5;
+    }
+</style>
+<div v-cloak id="app">
+    <div class="user-material">
+        <div v-if="materialList.length" class="list">
+            <a v-for="item in materialList" :key="item.id" :href="'{:url('/m/view-virtual')}?id=' + item.id">
+                <div class="user-material-img">
+                    <img :src="fx_cdn_img(item.image)" alt="">
+                </div>
+                <div class="user-material-intro">
+                    <div class="user-material-title">{{ item.title }}</div>
+                    <div class="user-material-meta">
+                        <div>{{ item.ficti + item.sales }}人已下载</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div v-if="loading" class="loading">
+            <i class="fa fa-spinner fa-spin loadingpic"></i>
+        </div>
+        <div v-if="finished && materialList.length" class="finished">已全部加载完</div>
+        <div v-if="finished && !materialList.length" class="empty">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/empty.png" alt="">
+            <div>暂无数据</div>
+        </div>
+    </div>
+{include file="public/store_menu"}
+</div>
+{/block}
+{block name="foot"}
+<script>
+    require(['vue', 'helper', 'store', 'quick'], function (Vue, axios, $http) {
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                page: 1,
+                limit: 16,
+                loading: false,
+                finished: false,
+                materialList: []
+            },
+            created: function () {
+                this.getMaterialList();
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    $h.EventUtil.listenTouchDirection(document, function () {
+                        vm.getMaterialList();
+                    });
+                });
+            },
+            methods: {
+                // 获取资料列表
+                getMaterialList: function () {
+                    if (this.loading || this.finished) {
+                        return;
+                    }
+                    this.loading = true;
+                    $http.basePost($h.U({
+                        c: 'material',
+                        a: 'my_material_list'
+                    }), {
+                        page: this.page++,
+                        limit: this.limit
+                    }, function (res) {
+                        var materialList = res.data.data;
+                        vm.loading = false;
+                        vm.materialList = vm.materialList.concat(materialList);
+                        vm.finished = vm.limit > materialList.length;
+                    }, function () {
+                        vm.loading = false;
+                    });
+                }
+            }
+        });
+    });
+</script>
+{/block}

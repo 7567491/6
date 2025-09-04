@@ -1,0 +1,57 @@
+<div class="my-account">
+    <h1 class="my-title">账户资料</h1>
+    <div class="content">
+        <div class="wrapper">
+            <div class="wrapper-title">我的信息</div>
+            <div class="wrapper-content">
+                <div class="item">
+                    <div class="item-title">我的头像：</div>
+                    <el-upload ref="upload" :show-file-list="false" :before-upload="handleBeforeUpload" :on-success="handleSuccess" action="/web/auth_api/upload" accept="image/jpg, image/jpeg, image/png" drag>
+                        <img v-if="avatar || userInfo.avatar" :src="avatar || userInfo.avatar">
+                        <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    </el-upload>
+                    <el-button type="text" @click="updateAvatar">修改</el-button>
+                </div>
+                <div class="item">
+                    <div class="item-title">我的账号：</div>
+                    <div>{{ userInfo.account }}</div>
+                </div>
+                <div class="item">
+                    <div class="item-title">我的昵称：</div>
+                    <el-input v-model="userInfo.nickname" :readonly="nicknameReadonly"></el-input>
+                    <el-button type="text" @click="nicknameReadonly = !nicknameReadonly">修改</el-button>
+                </div>
+                <div class="item">
+                    <div class="item-title">真实姓名：</div>
+                    <el-input v-model="userInfo.full_name" :readonly="fullnameReadonly"></el-input>
+                    <el-button type="text" @click="fullnameReadonly = !fullnameReadonly">修改</el-button>
+                </div>
+                <div class="item" v-if="login_types!=2">
+                    <div class="item-title">手机号：</div>
+                    <div>{{ userInfo.phone | phoneEncrypt }}</div>
+                    <el-button type="text" @click="openPhoneDg">修改</el-button>
+                </div>
+                <div class="item">
+                    <div class="item-title">我的ID：</div>
+                    <div>{{ userInfo.uid }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="wrapper" v-if="login_types!=2">
+            <div class="wrapper-title">密码设置</div>
+            <div class="wrapper-content">
+                <div class="item">
+                    <div>我的密码</div>
+                    <div>**********</div>
+                    <el-button type="text" @click="phonePwdVisible = true">修改</el-button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bottom">
+        <el-button round @click="save">保存</el-button>
+    </div>
+    <phone-pwd :phone-pwd-visible="phonePwdVisible" :user-info="userInfo" @phone-close="phoneClose" @login-again="loginAgain"></phone-pwd>
+    <bind-phone :bind-visible="bindVisible" :user-info="userInfo"  @phone-close="phoneClose" @login-again="loginAgain"></bind-phone>
+    <change-phone :change-visible="changeVisible" :user-info="userInfo"  @phone-close="phoneClose" @login-again="loginAgain"></change-phone>
+</div>

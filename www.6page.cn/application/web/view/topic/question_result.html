@@ -1,0 +1,325 @@
+{extend name="public/container"}
+{block name="title"}考试结果-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-sheet-title" style="margin-top: 0">{{ result.title }}</div>
+    <div class="wy-exam-result-rate">
+        <div class="wy-exam-result-circle">
+            <vue-circle-progress
+                    ref="circle"
+                    id="circle"
+                    :progress="0"
+                    :size="133"
+                    :reverse="false"
+                    line-cap="round"
+                    :fill="fill"
+                    empty-fill="rgba(213, 224, 236, 0.6)"
+                    :animation-start-value="0.0"
+                    :start-angle="Math.PI / 2"
+                    insert-mode="append"
+                    :thickness="5"
+                    inner-text="正确率"
+                    :show-percent="true"
+            >
+                <p>正确率</p>
+            </vue-circle-progress>
+        </div>
+        <div class="wy-exam-result-total">
+            <div class="wy-exam-detail-total">
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.score }}</em>分
+                    </div>
+                    <div class="wy-exam-total-label">
+                        考试得分
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.grade }}</em>
+                    </div>
+                    <div class="wy-exam-total-label">
+                        评分
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="wy-exam-result-total">
+            <div class="wy-exam-detail-total">
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.test_paper_question.length }}</em>
+                    </div>
+                    <div class="wy-exam-total-label">
+                        题目数
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.wrong_question }}</em>
+                    </div>
+                    <div class="wy-exam-total-label">
+                        错题数
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.not_questions }}</em>
+                    </div>
+                    <div class="wy-exam-total-label">
+                        未答数
+                    </div>
+                </div>
+                <div class="wy-exam-total-item">
+                    <div class="wy-exam-total-num">
+                        <em>{{ result.duration_time }}</em>
+                    </div>
+                    <div class="wy-exam-total-label">
+                        考试用时
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="wy-exam-sheet-main">
+            <div class="wy-exam-sheet-legend">
+                <div class="wy-exam-sheet-status">答题情况</div>
+                <ul>
+                    <li class="right">正确</li>
+                    <li class="wrong">错误</li>
+                    <li class="unknown">未答</li>
+                </ul>
+            </div>
+            <div v-if="result.test_paper_question.length" class="wy-exam-sheet-question">
+                <a
+                        v-for="(item, index) in result.test_paper_question"
+                        :class="{
+                    right: item.is_correct === 2,
+                    wrong: item.is_correct === 1
+                 }"
+                        href="javascript:"
+                >{{ index + 1 }}</a>
+            </div>
+        </div>
+        <div v-if="!footerHidden" class="wy-exam-sheet-footer">
+            <a :href="'{:url('/exam-sheet')}?is_analysis=1&test_id=' + test_id + '&record_id=' + result.id" class="el-button el-button--primary is-round" style="color: #fff">查看解析</a>
+            <a :href="'{:url('/exam')}?id=' + test_id" class="el-button el-button--default is-round">重新考试</a>
+        </div>
+    </div>
+    <el-dialog
+            title="证书预览"
+            :visible.sync="dgShow"
+            width="600px"
+            center>
+        <div>
+            <img width="100%" v-if="imgSrc" :src="imgSrc" class="certificate-image">
+        </div>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dgShow = false">取 消</el-button>
+            <el-button type="primary" @click="dgShow = false">确 定</el-button>
+         </div>
+    </el-dialog>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'scripts/util',
+        'api/exam',
+        'vue-circle-progress',
+        'moment',
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, util, examApi, VueCircle, moment) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'vue-circle-progress': VueCircle,
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                dgShow: false,
+                test_id: 0,
+                result: {
+                    title: '--',
+                    score: 0,
+                    grade: '--',
+                    test_paper_question: [],
+                    wrong_question: 0,
+                    duration_time: '00:00:00'
+                },
+                fill : { gradient: ["rgba(44, 142, 255, 1)", "rgba(44, 142, 255, 0.05)"] },
+                footerHidden: false,
+                imgSrc: ''
+            },
+            created: function () {
+                this.test_id = util.getParmas('test_id');
+                this.footerHidden = util.getParmas('from') === 'question_user';
+                this.getResult();
+
+                util.delCookie('exam_time');
+            },
+            methods: {
+                // 获取答题结果
+                getResult: function () {
+                    examApi.get_examination_results({
+                        test_id: this.test_id,
+                        type: 2
+                    }).then(function (res) {
+                        var result = res.data;
+                        var questions = result.test_paper_question;
+
+                        var duration = result.duration
+                        var hours = Math.floor(duration / 3600000);
+                        var minutes = Math.floor((duration - hours * 3600000) / 60000);
+                        var seconds = Math.floor((duration - hours * 3600000 - minutes * 60000) / 1000);
+                        if (hours < 10) {
+                            hours = '0' + hours;
+                        }
+                        if (minutes < 10) {
+                            minutes = '0' + minutes;
+                        }
+                        if (seconds < 10) {
+                            seconds = '0' + seconds;
+                        }
+                        result.duration_time = hours + ':' + minutes + ':' + seconds;
+
+                        for (var i = questions.length; i--;) {
+                            if (!Array.isArray(questions[i].userAnswer)) {
+                                Object.assign(questions[i], questions[i].userAnswer);
+                            }
+                        }
+
+                        vm.$refs.circle.updateProgress(parseInt(result.accuracy));
+                        vm.result = result;
+
+                        vm.getInspect();
+                    })
+                },
+                // 是否可以发放证书
+                getInspect: function () {
+                    var vm = this
+                    examApi.get_inspect({
+                        test_id: this.test_id
+                    }).then(function (res) {
+                        if (200 === res.code) {
+                            vm.$confirm('恭喜您已通过考试，是否领取证书?', '提示', {
+                                confirmButtonText: '领取',
+                                cancelButtonText: '取消',
+                                type: 'success'
+                            }).then(() => {
+                                vm.getCertificate();
+                            }).catch(() => {
+
+                            });
+                        }
+                    }).catch(function (err) {
+                    });
+                },
+                // 领取证书
+                getCertificate: function () {
+                    var that = this
+                    examApi.get_the_certificate({
+                        test_id: this.test_id
+                    }).then(function (res) {
+                        vm.$message({
+                            type: 'success',
+                            message: '领取成功，请进入个人中心-我的证书查看'
+                        });
+                    }).catch(function (err) {
+                        that.$message({
+                            type: 'error',
+                            message: err.msg
+                        });
+                    });
+                },
+                // 获取证书信息
+                getCertificateInfo: function (id) {
+                    examApi.view_ertificate({
+                        id: id,
+                        obtain: 2
+                    }).then(function (res) {
+                        // vm.createCertificate(res.data);
+                    })
+                },
+                // 加载图片
+                loadImage: function (path) {
+                    return new Promise(function (resolve, reject) {
+                        var image = new Image();
+                        image.crossOrigin = 'anonymous';
+                        image.onload = function () {
+                            resolve(image);
+                        };
+                        image.onerror = function () {
+                            reject('error-image');
+                        };
+                        image.src = path + '?' + new Date().getTime();
+                    });
+                },
+                // 生成证书图片
+                createCertificate: function (certificate) {
+                    Promise.all([
+                        this.loadImage(certificate.certificate.background),
+                        this.loadImage(certificate.certificate.qr_code)
+                    ]).then(function (images) {
+                        var canvas = document.createElement('canvas');
+                        var context = canvas.getContext('2d');
+
+                        canvas.width = images[0].width;
+                        canvas.height = images[0].height;
+
+                        context.drawImage(images[0], 0, 0);
+                        context.drawImage(images[1], 220, 557, 160, 160);
+
+                        context.fillStyle = 'rgba(255, 255, 255, 1)';
+                        context.fillRect(220, 724, 160, 36);
+
+                        context.font = '20px sans-serif';
+                        context.textAlign = 'center';
+                        context.fillStyle = '#666666';
+                        context.fillText('扫一扫验真伪', 300, 748);
+
+                        context.font = 'bold 34px sans-serif';
+                        context.fillStyle = '#29466D';
+                        context.fillText(certificate.nickname, 300, 296);
+
+                        context.font = '24px sans-serif';
+                        context.fillText('颁发时间：' + moment(certificate.add_time * 1000).format('YYYY.MM.DD'), 300, 481);
+
+                        context.font = '28px sans-serif';
+                        context.textAlign = 'start';
+                        context.fillStyle = '#333333';
+
+                        for (var i = Math.ceil(certificate.certificate.explain.length % 16); i--;) {
+                            context.fillText(certificate.certificate.explain.substr(i * 16, 16), 83, i * 40 + 370);
+                        }
+
+                        vm.imgSrc = canvas.toDataURL('image/jpeg');
+                        canvas = null;
+                        vm.dgShow = true
+                    }).catch(function (error) {
+                        console.error(error);
+                    });
+                }
+            }
+        })
+    })
+</script>
+{/block}

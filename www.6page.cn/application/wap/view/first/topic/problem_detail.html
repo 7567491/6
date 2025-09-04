@@ -1,0 +1,383 @@
+
+{extend name="public/container"}
+{block name="title"}练习答题-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    body {
+        background-color: #f5f5f5;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="question-detail-page">
+        <div v-show="questions.length" class="header">
+            <a :href="'{:url('/m/test-sheet')}?test_id=' + test_id + '&record_id=' + e_id + '&index=' + activeIndex">答题卡</a>
+            <a v-if="isWechat" href="javascript:" @click="share = true">分享</a>
+        </div>
+        <div class="swiper-container">
+            <div class="swiper-wrapper">
+                <div v-for="(item, index) in questions" :key="item.id" class="swiper-slide">
+                    <div class="type">{{ item.question_type | covertType }}</div>
+                    <div class="question">
+                        <div>{{ item.stem }}</div>
+                        <img v-if="item.image" :src="fx_cdn_img(item.image)">
+                        <div :class="{ image: item.is_img }" class="label-group">
+                            <template v-for="option in item.options">
+                                <label v-if="option.value" :key="option.key">
+                                    <input v-if="item.question_type === 2" v-model="item.user_answer" :value="option.key" type="checkbox" :disabled="!!item.is_correct" hidden>
+                                    <input v-else v-model="item.user_answer" :value="option.key" type="radio" :disabled="!!item.is_correct" hidden>
+                                    <div :class="{ ok: item.is_correct && option.right, no: item.is_correct && !option.right && (option.key === item.user_answer || item.user_answer.indexOf(option.key) !== -1)}">
+                                        <img v-if="item.is_img" :src="fx_cdn_img(option.value)">
+                                        <template v-else>{{ option.value }}</template>
+                                    </div>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    <div v-show="item.is_correct && index === activeIndex" class="analysis">
+                        <div :class="{ no: item.is_correct === 1 }">{{ item.is_correct === 1 ? '回答错误' : '回答正确' }}</div>
+                        <div>
+                            <div>正确答案：<div>{{ item.answer }}</div></div>
+                            <div>您的答案：<div>{{ item.user_answer.toString() }}</div></div>
+                        </div>
+                        <div>试题难度：<span v-for="star in 5" :key="star" :class="{ on: star <= item.difficulty }" class="iconfont iconxing"></span></div>
+                        <div>答案解析：</div>
+                        <div v-html="item.analysis"></div>
+                        <div v-if="item.special.length">关联知识点：</div>
+                        <a v-for="special in item.special" :key="special.id" :href="(special.is_light ? '{:url('/m/single-course')}' : '{:url('/m/view-course')}') + '?id=' + special.id">{{ special.title }}</a>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+        <div v-show="questions.length && !is_analysis" class="button-group">
+            <button type="button" @click="submitQuestion">提交本题</button>
+            <a v-show="activeIndex === questions.length - 1" :href="'{:url('/m/test-sheet')}?test_id=' + test_id + '&record_id=' + e_id + '&index=' + activeIndex">提交练习</a>
+        </div>
+    </div>
+    <img v-show="share" class="share-mask" src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/share-info.png" @touchmove.prevent @click="share = false">
+    <question-guide v-if="!problemGuide" @record-guide="recordGuide"></question-guide>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    window.overallShare = false;
+    var wechat_share=<?php echo isset($overallShareWechat) ? $overallShareWechat : '{}'; ?>;
+    var uid = '{$uid}';
+    var titles = '{$titles}';
+    require([
+        'vue',
+        'helper',
+        'axios',
+        'swiper',
+        'layer',
+        'quick',
+        'question-guide'
+    ], function (Vue, $h, axios, Swiper, layer) {
+        var vm = new Vue({
+            el: '#app',
+            filters: {
+                covertType: function (type) {
+                    var result = '判断题';
+                    switch (type) {
+                        case 1:
+                            result = '单选题';
+                            break;
+                        case 2:
+                            result = '多选题';
+                            break;
+                    }
+                    return result;
+                }
+            },
+            data: {
+                swiperOption: {
+                    pagination: {
+                        el: '.swiper-pagination',
+                        type: 'fraction'
+                    },
+                    observer: true,
+                    observeParents: true,
+                    observeSlideChildren: true
+                },
+                questions: [],
+                test_id: '',
+                e_id: '',
+                isWechat: false,
+                activeIndex: 0,
+                problemGuide: null,
+                is_analysis: 0,
+                share: false
+            },
+            created: function () {
+                this.test_id = $h.getParmas('test_id');
+                this.initialSlide = $h.getParmas('index');
+
+                if ($h.getParmas('e_id') && parseInt($h.getParmas('is_analysis'))) {
+                    this.is_analysis = 1;
+                    this.e_id = $h.getParmas('e_id');
+                    this.getQuestions();
+                } else {
+                    this.getSituation();
+                }
+
+                this.problemGuide = localStorage.getItem('problem_guide');
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    this.swiper = new Swiper('.swiper-container', this.swiperOption);
+                    this.swiper.on('observerUpdate, slideChange', this.slideChange);
+                    if (this.initialSlide) {
+                        this.swiper.slideTo(this.initialSlide);
+                    }
+                    if (-1 !== navigator.userAgent.toLowerCase().indexOf('micromessenger')) {
+                        vm.isWechat = true;
+                        mapleWx($jssdk(), function () {
+                            this.onMenuShareAll({
+                                title: titles,
+                                desc: titles,
+                                imgUrl: wechat_share.wechat_share_img,
+                                link: location.origin + "{:url('/m/test')}?spread_uid=" + uid + "&id=" + vm.test_id
+                            });
+                        });
+                    }
+                });
+            },
+            methods: {
+                // 答题指引
+                recordGuide: function () {
+                    this.problemGuide = 1;
+                    localStorage.setItem('problem_guide', this.problemGuide);
+                },
+                // 获取状态
+                getSituation: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/situationRecord', {
+                        params: {
+                            id: this.test_id
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 400) {
+                            return layer.msg(res.data.msg);
+                        }
+                        switch (res.data.data) {
+                            case 0:
+                                vm.getAnswer();
+                                break;
+                            case 1:
+                                vm.getAnswerAgain();
+                                break;
+                            case 2:
+                                vm.getAnswerContinue();
+                                break;
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 开始答题
+                getAnswer: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/userAnswer', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 1
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id = res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(res.data.msg, function () {
+                                window.location = "{:url('/m/my-topic')}?type=1";
+                            });
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 再次答题
+                getAnswerAgain: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/takeTheTestAgain', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 1
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id = res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(res.data.msg, function () {
+                                window.location = "{:url('/m/my-topic')}?type=1";
+                            });
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 继续答题
+                getAnswerContinue: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/continueAnswer', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 1
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id = res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(res.data.msg, function () {
+                                window.location = "{:url('/m/my-topic')}?type=1";
+                            });
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 获取练习题
+                getQuestions: function () {
+                    var layerLoad = layer.load(1);
+                    axios.get('/wap/topic/testPaperQuestions', {
+                        params: {
+                            test_id: this.test_id,
+                            record_id: this.e_id,
+                            type: 1
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 400) {
+                            return layer.msg(res.data.msg);
+                        }
+                        var questions = res.data.data;
+                        questions.forEach(function (question) {
+                            var answers = question.answer.split(',');
+                            question.options = [];
+                            if (Array.isArray(question.option)) {
+                                question.option.forEach(function (item, index) {
+                                    var right = false;
+                                    for (var i = answers.length; i--;) {
+                                        if (answers[i] === String.fromCharCode(index + 65)) {
+                                            right = true;
+                                            break;
+                                        }
+                                    }
+                                    question.options.push({
+                                        key: String.fromCharCode(index + 65),
+                                        value: item,
+                                        right: right
+                                    });
+                                });
+                            } else {
+                                for (var key in question.option) {
+                                    if (Object.hasOwnProperty.call(question.option, key)) {
+                                        var right = false;
+                                        for (var i = answers.length; i--;) {
+                                            if (answers[i] === key) {
+                                                right = true;
+                                                break;
+                                            }
+                                        }
+                                        question.options.push({
+                                            key: key,
+                                            value: question.option[key],
+                                            right: right
+                                        });
+                                    }
+                                }
+                            }
+                            if (!Array.isArray(question.userAnswer)) {
+                                Object.assign(question, question.userAnswer);
+                            }
+                            if ('user_answer' in question) {
+                                if (question.question_type === 2) {
+                                    question.user_answer = question.user_answer.split(',');
+                                }
+                            } else {
+                                question.user_answer = question.question_type === 2 ? [] : '';
+                            }
+                            if (!('is_correct' in question)) {
+                                question.is_correct = 0;
+                            }
+                        });
+                        vm.questions = questions;
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(layerLoad);
+                    });
+                },
+                // 提交单个题目
+                submitQuestion: function () {
+                    var question = this.questions[this.swiper.activeIndex];
+                    var data = {
+                        e_id: this.e_id,
+                        questions_id: question.questions_id,
+                        answer: question.answer,
+                        score: question.score,
+                        type: 1
+                    };
+
+                    if (question.is_correct) {
+                        return layer.msg('本题已经提交');
+                    }
+
+                    if (!question.user_answer.length) {
+                        return layer.msg('请选择答案');
+                    }
+
+                    if (typeof question.user_answer === 'string') {
+                        data.user_answer = question.user_answer;
+                        data.is_correct = question.answer === question.user_answer ? 2 : 1;
+                    } else {
+                        var answer = question.answer.split(',');
+
+                        if (answer.length === question.user_answer.length) {
+                            if (answer.toString() === question.user_answer.toString()) {
+                                data.is_correct = 2;
+                            } else {
+                                data.is_correct = answer.sort().toString() === question.user_answer.sort().toString() ? 2 : 1;
+                            }
+                        } else {
+                            data.is_correct = 1;
+                        }
+
+                        data.user_answer = question.user_answer.sort().toString();
+                    }
+                    var index = layer.load(1);
+                    axios.post('/wap/topic/submitQuestions', data).then(function (res) {
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            question.is_correct = data.is_correct;
+                        } else {
+                            layer.msg(resData.msg);
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 当前题目下标
+                slideChange: function () {
+                    this.activeIndex = this.swiper.activeIndex;
+                }
+            }
+        });
+    });
+</script>
+{/block}

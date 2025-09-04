@@ -1,0 +1,287 @@
+
+{extend name="public/container"}
+{block name="title"}个人中心-{$Auth_site_name}{/block}
+{block name="head"}
+<style>
+    html {
+        min-height: 100%;
+    }
+    body {
+        padding-bottom: 1.1rem;
+        background-color: #fff;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app" class="user-page">
+    <div class="user-section" @click="goUrl('{:Url('/m/my-profile')}', 1)">
+        {if isset($userInfo['uid']) && $userInfo['uid']}
+        <img class="img" src="{:get_image_src($userInfo.avatar)}">
+        {else}
+        <img class="img" src="{$Think.const.IMG_DOMAIN}/wap/images/avatar_default.jpg">
+        {/if}
+        <div class="text-wrap">
+            {if isset($userInfo['uid']) && $userInfo['uid']}
+            <div class="name">{$userInfo.nickname}</div>
+            {if $userInfo['level'] eq 1 && $userInfo['is_permanent'] neq 1}
+            <div class="info">
+                <img class="icon" src="{$Think.const.IMG_DOMAIN}/wap/images/user_member1.png">
+                <span class="time">{$overdue_time}到期</span>
+            </div>
+            {elseif $userInfo['level'] eq 1 && $userInfo['is_permanent'] eq 1}
+            <div class="info">
+                <img class="icon" src="{$Think.const.IMG_DOMAIN}/wap/images/user_member1.png">
+                <span class="time">永久会员</span>
+            </div>
+            {elseif $userInfo['level'] eq 0 && $userInfo['member_time'] neq 0}
+            <div class="info">
+                <img class="icon" src="{$Think.const.IMG_DOMAIN}/wap/images/user_member1.png">
+                <span class="time">会员已过期</span>
+            </div>
+            {else /}
+            <div class="info">
+                <img class="icon" src="{$Think.const.IMG_DOMAIN}/wap/images/user_member1.png">
+                <span class="time">未开通会员</span>
+            </div>
+            {/if}
+            {else}
+            <div class="name">请登录</div>
+            {/if}
+        </div>
+        <div class="iconfont iconxiangyou"></div>
+    </div>
+    <div class="member-section" @click="memberUrl">
+        <div class="member-section-inner">
+            <div >
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/user_member2.png" >
+            </div>
+            <div>高级会员享专属特权</div>
+            {notempty name="$userInfo"}
+            {if isset($userInfo['is_permanent']) && $userInfo['is_permanent'] neq 1}
+            {if $userInfo['level'] eq 1 || $userInfo['member_time'] neq 0}
+            <button >续费会员</button>
+            {else}
+            <button >立即开通</button>
+            {/if}
+            {/if}
+            {else /}
+            <button >立即开通</button>
+            {/notempty}
+        </div>
+    </div>
+    <div class="tool-section">
+        <a href="javascript:" @click="goUrl('{:Url('/m/my-courses')}', 1)">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/wdkc.png">
+            我的课程
+        </a>
+        <a href="javascript:" @click="goUrl('{:Url('/m/my-record')}', 1)">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/xxjl.png">
+            学习记录
+        </a>
+        <a href="javascript:" @click="goUrl('{:Url('/m/my-order')}', 1)" v-show="is_store_switch==1">
+            <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/ddgl.png">
+            实物订单
+        </a>
+    </div>
+    <div v-if="question.length" class="question-section">
+        <div class="question-section-inner">
+            <a class="question-item" v-for="item in question" :key="item.id" href="javascript:" @click="goUrl(item.url, 1)">
+                <div>
+                    <img :src="fx_cdn_img(item.icon)">
+                </div>
+                <div>
+                    <div>{{ item.title }}</div>
+                    <div>{{ item.explain }}</div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <div class="serve-section">
+        <div class="section-hd">我的服务</div>
+        <div class="section-bd">
+            <a v-for="item in menuList" :key="item.id" href="javascript:" @click="goUrl(item, 2)">
+                <img :src="fx_cdn_img(item.icon)">
+                {{ item.title }}
+            </a>
+            {if isset($userInfo['uid']) && $userInfo['uid']}
+            <a href="javascript:" @click="logout">
+                <img src="{$Think.const.IMG_DOMAIN}{__WAP_PATH}/images/logout.png">
+                退出登录
+            </a>
+            {/if}
+        </div>
+    </div>
+    {if $is_official_account_switch}
+    <div v-show="isfollow">
+        <div class="mask" @touchmove.prevent></div>
+        <div class="follow">
+            <div>立即绑定微信公众号用户</div>
+            <img :src="codeUrl">
+            <button @click.stop="skip">跳过</button>
+        </div>
+    </div>
+    {/if}
+    <base-login :login-show="loginShow" :site-name="site_name" @login-close="logComplete"></base-login>
+    {include file="public/store_menu"}
+</div>
+<script>
+    var site_name = '{$Auth_site_name}',store_switch = '{$store_switch}',isyue={$is_yue ? 'true' : 'false'},phone='{$phone}',isWechat='{$isWechat}',is_official_account_switch={$is_official_account_switch};
+    require(['vue', 'helper', 'store', 'layer', 'axios', 'components/base_login/index', '{$Think.const.IMG_DOMAIN}{__WAP_PATH}/js/enter.js'], function (Vue, $h, app, layer, axios, BaseLogin) {
+        new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin
+            },
+            data: {
+                appear: true,
+                codeUrl: '',
+                isfollow: false,
+                url: isWechat ? $h.U({ c: 'index', a: 'login' }) : $h.U({ c: 'login', a: 'phone_check' }),
+                site_name: site_name,
+                isyue: isyue,
+                phone: phone,
+                isWechat: isWechat,
+                menuList: [],
+                question: [],
+                loginShow: false,
+                is_store_switch:store_switch
+            },
+            created: function () {
+                this.getQuestion();
+                this.getMenu();
+            },
+            methods: {
+                getMenu: function () {
+                    var that = this;
+                    $h.loadFFF();
+                    app.baseGet($h.U({
+                        c: 'my',
+                        a: 'getPersonalCenterMenu'
+                    }), function(res) {
+                        $h.loadClear();
+                        that.menuList = res.data.data;
+                    }, function(err) {
+                        $h.loadClear();
+                    });
+                },
+                skip: function () {
+                    this.isfollow = false;
+                    this.appear = true;
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 800);
+                },
+                logComplete: function (data) {
+                    var that = this;
+                    that.loginShow = false;
+                    if (!data) {
+                        return;
+                    }
+                    if (!data.isfollow && is_official_account_switch) {
+                        that.codeUrl = data.url;
+                        that.isfollow = true;
+                    } else {
+                        window.location.reload();
+                    }
+                },
+                goUrl: function (item,type) {
+                    var that = this;
+                    app.baseGet2($h.U({ c: 'index', a: 'login_user' }), function (res) {
+                        if(type==1){
+                            window.location.href =item;
+                        }else{
+                            if (item.link.includes('service_list')) {
+                                $h.loadFFF();
+                                app.baseGet($h.U({
+                                    c: 'public_api',
+                                    a: 'public_data'
+                                }), function (res) {
+                                    $h.loadClear();
+                                    if (res.data.data.customer_service == 3) {
+                                        layer.confirm('是否拨打<a href="tel:' + res.data.data.site_service_phone + '"> ' + res.data.data.site_service_phone + ' </a>，进行咨询？', {
+                                            title: false,
+                                            skin: 'service-phone-dialog',
+                                            closeBtn: false,
+                                            scrollbar: false
+                                        }, function(index){
+                                            window.location.href = 'tel:' + res.data.data.site_service_phone;
+                                            layer.close(index);
+                                        });
+                                    } else {
+                                        window.location.href = item.link;
+                                    }
+                                }, function () {
+                                    $h.loadClear();
+                                });
+                            } else {
+                                window.location.href = item.link;
+                            }
+                        }
+                    }, function (err) {
+                        if (err.code == 302) {
+                            window.location.href = err.data.path;
+                            return;
+                        }
+                        that.loginShow = true;
+                    });
+                },
+                memberUrl:function(){
+                    var that = this;
+                    app.baseGet($h.U({ c: 'index', a: 'login_user' }), function (res) {
+                        window.location.href = $h.U({
+                            s: true,
+                            c: 'special',
+                            a: 'member_recharge'
+                        });
+                    }, function () {
+                        that.appear = false;
+                    });
+                },
+                //所有插件回调处理事件
+                changeVal: function (opt) {
+                    if (typeof opt != 'object') opt = {};
+                    var action = opt.action || '';
+                    var value = opt.value || '';
+                    this[action] && this[action](value);
+                },
+                enter: function () {
+                    this.appear = false;
+                },
+                change: function (title) {
+                    this.appear = title;
+                },
+                logout: function () {
+                    var that = this;
+                    layer.confirm('确认退出登录？', {
+                        title: false,
+                        skin: 'logout-dialog',
+                        closeBtn: false,
+                        scrollbar: false
+                    }, function () {
+                        app.baseGet($h.U({ c: 'my', a: 'logout' }), function (res) {
+                            $h.pushMsgOnce(res.data.msg, function () {
+                                location.reload();
+                            });
+                        });
+                    });
+                },
+                // 练习考试模块
+                getQuestion: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/my/questionModule').then(function (res) {
+                        this.question = res.data.data;
+                    }.bind(this)).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                loginClose: function (data) {
+                    // this.loginShow = false;
+                    // this.logComplete(data);
+                }
+            }
+        })
+    })
+</script>
+{/block}

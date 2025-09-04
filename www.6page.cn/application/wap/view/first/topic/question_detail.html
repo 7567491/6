@@ -1,0 +1,563 @@
+
+{extend name="public/container"}
+{block name="title"}考试答题-{$Auth_site_name}{/block}
+{block name="head_top"}
+<style>
+    body {
+        background-color: #f5f5f5;
+    }
+</style>
+{/block}
+{block name="content"}
+<div v-cloak id="app">
+    <div class="question-detail-page">
+        <div v-show="questions.length" class="header">
+            <a :href="'{:url('/m/exam-sheet')}?test_id=' + test_id + '&record_id=' + e_id + '&index=' + activeIndex + '&is_analysis=' + is_analysis + '&txamination_time=' + txamination_time + '&exam_time=' + duration">答题卡</a>
+            <div v-if="!is_analysis">{{ duration | formatTime }}</div>
+        </div>
+        <div class="swiper-container">
+            <div class="swiper-wrapper">
+                <div v-for="(item, index) in questions" :key="item.id" class="swiper-slide">
+                    <div class="type">{{ item.question_type | covertType }}</div>
+                    <div class="question">
+                        <div>{{ item.stem }}</div>
+                        <img v-if="item.image" :src="fx_cdn_img(item.image)">
+                        <div :class="{ image: item.is_img }" class="label-group">
+                            <template v-for="option in item.options">
+                                <label v-if="option.value" :key="option.key">
+                                    <input v-if="item.question_type === 2" v-model="item.user_answer" type="checkbox" :value="option.key" :disabled="!!is_analysis" hidden>
+                                    <input v-else v-model="item.user_answer" type="radio" :value="option.key" :disabled="!!is_analysis" hidden>
+                                    <div :class="{ ok: item.is_correct && option.right && is_analysis, no: item.is_correct && !option.right && (option.key === item.user_answer || item.user_answer.indexOf(option.key)) !== -1 && is_analysis }">
+                                        <img v-if="item.is_img" :src="fx_cdn_img(option.value)">
+                                        <template v-else>{{ option.value }}</template>
+                                    </div>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    <div v-if="is_analysis && index === activeIndex" class="analysis">
+                        <div :class="{ no: 1 === item.is_correct }">{{ 2 === item.is_correct ? '回答正确' : '回答错误' }}</div>
+                        <div>
+                            <div>正确答案：<div>{{ item.answer }}</div></div>
+                            <div>您的答案：<div>{{ item.user_answer.toString() }}</div></div>
+                        </div>
+                        <div>试题难度：<span v-for="star in 5" :key="star" :class="{ on: star <= item.difficulty }" class="iconfont iconxing"></span></div>
+                        <div>答案解析：</div>
+                        <div v-html="item.analysis"></div>
+                        <div v-if="item.special.length">关联知识点：</div>
+                        <a v-for="special in item.special" :key="special.id" :href="(special.is_light ? '{:url('/m/single-course')}' : '{:url('/m/view-course')}') + '?id=' + special.id">{{ special.title }}</a>
+                    </div>
+                    <div class="button-group">
+                        <button v-if="item.question_type === 2 && !is_analysis" type="button" @click="submitCurrentQuestion">提交本题</button>
+                        <button v-if="!is_analysis && index === questions.length - 1" type="button" @click="submit">提交考试</button>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+    </div>
+    <question-guide v-if="!questionGuide" @record-guide="recordGuide"></question-guide>
+    <quick-menu v-if="is_analysis"></quick-menu>
+</div>
+{/block}
+{block name="foot"}
+<script>
+    var uid = '{$uid}';
+    var titles = '{$titles}';
+    var wechat_share=<?php echo isset($overallShareWechat) ? $overallShareWechat : '{}'; ?>;
+    window.overallShare = false;
+    require(['vue', 'helper', 'axios', 'swiper', 'layer', 'question-guide', 'quick'], function (Vue, $h, axios, Swiper, layer) {
+        var vm = new Vue({
+            el: '#app',
+            filters: {
+                covertType: function (type) {
+                    var result = '判断题';
+                    switch (type) {
+                        case 1:
+                            result = '单选题';
+                            break;
+                        case 2:
+                            result = '多选题';
+                            break;
+                    }
+                    return result;
+                },
+                formatTime: function (time) {
+                    var hour = Math.floor(time / 3600000);
+                    var minute = Math.floor((time - hour * 3600000) / 60000);
+                    var second = Math.floor((time - hour * 3600000 - minute * 60000) / 1000);
+
+                    if (hour < 10) {
+                        hour = '0' + hour;
+                    }
+                    if (minute < 10) {
+                        minute = '0' + minute;
+                    }
+                    if (second < 10) {
+                        second = '0' + second;
+                    }
+
+                    return hour + ':' + minute + ':' + second;
+                }
+            },
+            data: {
+                swiperOption: {
+                    pagination: {
+                        el: '.swiper-pagination',
+                        type: 'fraction'
+                    },
+                    observer: true,
+                    observeParents: true,
+                    observeSlideChildren: true
+                },
+                activeIndex: 0,
+                questions: [],
+                test_id: '',
+                e_id: 0,
+                startTime: new Date(),
+                duration: 0,
+                is_analysis: 0,
+                txamination_time: 0,
+                questionGuide: null,
+                submitProblem: {}
+            },
+            watch: {
+                activeQuestion: {
+                    handler: function (question) {
+                        if (!question) {
+                            return;
+                        }
+
+                        if (!question.is_correct) {
+                            if (2 !== question.question_type) {
+                                if (question.user_answer.length) {
+                                    this.swiper.slideNext();
+                                }
+                            }
+                        }
+                    },
+                    deep: true
+                }
+            },
+            computed: {
+                activeQuestion: function () {
+                    return this.questions[this.activeIndex];
+                }
+            },
+            created: function () {
+                this.test_id = $h.getParmas('test_id');
+                if ($h.getParmas('txamination_time')) {
+                    this.txamination_time = parseInt($h.getParmas('txamination_time'));
+                }
+
+                if ($h.getCookie('exam_time')) {
+                    if ($h.getCookie('exam_time') === 'NaN') {
+                        this.exam_time = 0;
+                    } else {
+                        this.exam_time = parseInt($h.getCookie('exam_time'));
+                    }
+                } else {
+                    this.exam_time = 0;
+                }
+
+                if ($h.getParmas('index')) {
+                    this.initialSlide = $h.getParmas('index');
+                }
+
+                if ($h.getParmas('e_id') && parseInt($h.getParmas('is_analysis'))) {
+                    this.is_analysis = 1;
+                    this.e_id = $h.getParmas('e_id');
+                    this.getQuestions();
+                } else {
+                    this.getSituation();
+                    this.setTimer();
+                }
+
+                this.questionGuide = localStorage.getItem('question_guide');
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    this.swiper = new Swiper('.swiper-container', this.swiperOption);
+                    this.swiper.on('observerUpdate, slideChange', this.slideChange);
+                    this.swiper.on('slidePrevTransitionEnd', this.slidePrevTransitionEnd);
+                    this.swiper.on('slideNextTransitionEnd', this.slideNextTransitionEnd);
+                    if (this.initialSlide) {
+                        this.swiper.slideTo(this.initialSlide);
+                    }
+                    if (-1 !== navigator.userAgent.toLowerCase().indexOf('micromessenger')) {
+                        mapleWx($jssdk(), function () {
+                            this.onMenuShareAll({
+                                title: titles,
+                                desc: titles,
+                                imgUrl: wechat_share.wechat_share_img,
+                                link: location.origin + "{:url('/m/exam')}?spread_uid=" + uid + "&id=" + vm.test_id
+                            });
+                        });
+                    }
+                });
+            },
+            methods: {
+                recordGuide: function () {
+                    this.questionGuide = 1;
+                    localStorage.setItem('question_guide', this.questionGuide);
+                },
+                // 获取状态
+                getSituation: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/situationRecord', {
+                        params: {
+                            id: this.test_id
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 400) {
+                            return layer.msg(res.data.msg);
+                        }
+                        switch (res.data.data) {
+                            case 0:
+                                vm.getAnswer();
+                                break;
+                            case 1:
+                                vm.getAnswerAgain();
+                                break;
+                            case 2:
+                                vm.getAnswerContinue();
+                                break;
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 开始答题
+                getAnswer: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/userAnswer', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 2
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id = res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(res.data.msg, function () {
+                                window.location = "{:url('/m/my-topic')}?type=2";
+                            });
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 再次答题
+                getAnswerAgain: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/takeTheTestAgain', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 2
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id = res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(res.data.msg, function () {
+                                window.location = "{:url('/m/my-topic')}?type=2";
+                            });
+                        }
+                    }).catch(function (err) {
+                        layer.msg(err, function () {
+                            window.location = "{:url('/m/my-topic')}?type=2";
+                        });
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 继续答题
+                getAnswerContinue: function () {
+                    var index = layer.load(1);
+                    axios.get('/wap/topic/continueAnswer', {
+                        params: {
+                            test_id: this.test_id,
+                            type: 2
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 200) {
+                            vm.e_id=res.data.data;
+                            $h.setCookie('e_id', vm.e_id);
+                            vm.getQuestions();
+                        } else {
+                            layer.msg(err, function () {
+                                window.location = "{:url('/m/my-topic')}?type=2";
+                            });
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 获取考试题
+                getQuestions: function () {
+                    var layerLoad = layer.load(1);
+                    axios.get('/wap/topic/testPaperQuestions', {
+                        params: {
+                            test_id: this.test_id,
+                            record_id: this.e_id,
+                            type: 2
+                        }
+                    }).then(function (res) {
+                        if (res.data.code === 400) {
+                            return layer.msg(res.data.msg);
+                        }
+                        var questions = res.data.data;
+                        questions.forEach(function (question) {
+                            var answers = question.answer.split(',');
+                            question.options = [];
+                            if (Array.isArray(question.option)) {
+                                question.option.forEach(function (item, index) {
+                                    var right = false;
+                                    for (var i = answers.length; i--;) {
+                                        if (answers[i] === String.fromCharCode(index + 65)) {
+                                            right = true;
+                                            break;
+                                        }
+                                    }
+                                    question.options.push({
+                                        key: String.fromCharCode(index + 65),
+                                        value: item,
+                                        right: right
+                                    });
+                                });
+                            } else {
+                                for (var key in question.option) {
+                                    if (Object.hasOwnProperty.call(question.option, key)) {
+                                        var right = false;
+                                        for (var i = answers.length; i--;) {
+                                            if (answers[i] === key) {
+                                                right = true;
+                                                break;
+                                            }
+                                        }
+                                        question.options.push({
+                                            key: key,
+                                            value: question.option[key],
+                                            right: right
+                                        });
+                                    }
+                                }
+                            }
+                            if (!Array.isArray(question.userAnswer)) {
+                                Object.assign(question, question.userAnswer);
+                            }
+                            if ('user_answer' in question) {
+                                if (question.question_type === 2) {
+                                    question.user_answer = question.user_answer.split(',');
+                                }
+                            } else {
+                                question.user_answer = question.question_type === 2 ? [] : '';
+                            }
+                            if (!('is_correct' in question)) {
+                                question.is_correct = 0;
+                            }
+                        });
+                        vm.questions = questions;
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(layerLoad);
+                    });
+                },
+                // 提交试题
+                submitQuestion: function () {
+                    if (this.is_analysis) {
+                        return;
+                    }
+                    var question = this.submitProblem;
+                    var data = {
+                        e_id: this.e_id,
+                        questions_id: question.questions_id,
+                        answer: question.answer,
+                        // score: question.score,
+                        type: 2
+                    };
+
+                    if (typeof question.user_answer === 'string') {
+                        data.user_answer = question.user_answer;
+                        data.is_correct = question.answer === question.user_answer ? 2 : 1;
+                    } else {
+                        var answer = question.answer.split(',');
+
+                        if (answer.length === question.user_answer.length) {
+                            if (answer.toString() === question.user_answer.toString()) {
+                                data.is_correct = 2;
+                            } else {
+                                data.is_correct = answer.sort().toString() === question.user_answer.sort().toString() ? 2 : 1;
+                            }
+                        } else {
+                            data.is_correct = 1;
+                        }
+
+                        data.user_answer = question.user_answer.sort().toString();
+                    }
+                    data.score = data.is_correct == 2 ? question.score : 0;
+                    var index = layer.load(1);
+                    axios.post('/wap/topic/submitQuestions', data).then(function (res) {
+                        var resData = res.data;
+                        if (resData.code === 200) {
+                            question.is_correct = data.is_correct;
+                        } else {
+                            layer.msg(resData.msg);
+                        }
+                    }).catch(function (err) {
+
+                    }).then(function () {
+                        layer.close(index);
+                    });
+                },
+                // 当前题目下标
+                slideChange: function () {
+                    this.activeIndex = this.swiper.activeIndex;
+                },
+                // 上一题
+                slidePrevTransitionEnd: function () {
+                    this.submitProblem = this.questions[this.swiper.activeIndex + 1];
+                    if (this.submitProblem && this.submitProblem.user_answer.length) {
+                        this.submitQuestion();
+                    }
+                },
+                // 下一题
+                slideNextTransitionEnd: function () {
+                    this.submitProblem = this.questions[this.swiper.activeIndex - 1];
+                    if (this.submitProblem && this.submitProblem.user_answer.length) {
+                        this.submitQuestion();
+                    }
+                },
+                // 计时器
+                setTimer: function () {
+                    window.addEventListener('pagehide', function () {
+                        $h.setCookie('exam_time', vm.duration);
+                    });
+                    var timer = setInterval(function () {
+                        vm.duration = new Date() - vm.startTime + vm.exam_time;
+                        if (vm.txamination_time * 60000 <= vm.duration) {
+                            clearInterval(timer);
+                            layer.msg('考试时间已到', function () {
+                                vm.submit();
+                            });
+                        }
+                    }, 1000);
+                },
+                // 提交考试
+                submit: function () {
+                    var submitProblem = this.questions[this.activeIndex];
+                    if (submitProblem.user_answer.length) {
+                        var question = submitProblem;
+                        var data = {
+                            e_id: this.e_id,
+                            questions_id: question.questions_id,
+                            answer: question.answer,
+                            score: question.score,
+                            type: 2
+                        };
+
+                        if (typeof question.user_answer === 'string') {
+                            data.user_answer = question.user_answer;
+                            data.is_correct = question.answer === question.user_answer ? 2 : 1;
+                        } else {
+                            var answer = question.answer.split(',');
+
+                            if (answer.length === question.user_answer.length) {
+                                if (answer.toString() === question.user_answer.toString()) {
+                                    data.is_correct = 2;
+                                } else {
+                                    data.is_correct = answer.sort().toString() === question.user_answer.sort().toString() ? 2 : 1;
+                                }
+                            } else {
+                                data.is_correct = 1;
+                            }
+
+                            data.user_answer = question.user_answer.sort().toString();
+                        }
+                        var index = layer.load(1);
+                        axios.post('/wap/topic/submitQuestions', data).then(function (res) {
+                            var resData = res.data;
+                            if (resData.code === 200) {
+                                question.is_correct = data.is_correct;
+                                window.location = "{:url('/m/exam-sheet')}?test_id=" + vm.test_id + '&record_id=' + vm.e_id + '&index=' + vm.activeIndex + '&is_analysis=' + vm.is_analysis + '&txamination_time=' + vm.txamination_time;
+                            } else {
+                                layer.msg(resData.msg);
+                            }
+                        }).catch(function (err) {
+
+                        }).then(function () {
+                            layer.close(index);
+                        });
+                    } else {
+                        window.location = "{:url('/m/exam-sheet')}?test_id=" + vm.test_id + '&record_id=' + vm.e_id + '&index=' + vm.activeIndex + '&is_analysis=' + vm.is_analysis + '&txamination_time=' + vm.txamination_time;
+                    }
+                },
+                // 提交本题
+                submitCurrentQuestion: function () {
+                    var submitProblem = this.questions[this.activeIndex];
+                    if (submitProblem.user_answer.length) {
+                        var question = submitProblem;
+                        var data = {
+                            e_id: this.e_id,
+                            questions_id: question.questions_id,
+                            answer: question.answer,
+                            score: question.score,
+                            type: 2
+                        };
+
+                        if (typeof question.user_answer === 'string') {
+                            data.user_answer = question.user_answer;
+                            data.is_correct = question.answer === question.user_answer ? 2 : 1;
+                        } else {
+                            var answer = question.answer.split(',');
+
+                            if (answer.length === question.user_answer.length) {
+                                if (answer.toString() === question.user_answer.toString()) {
+                                    data.is_correct = 2;
+                                } else {
+                                    data.is_correct = answer.sort().toString() === question.user_answer.sort().toString() ? 2 : 1;
+                                }
+                            } else {
+                                data.is_correct = 1;
+                            }
+
+                            data.user_answer = question.user_answer.sort().toString();
+                        }
+                        var index = layer.load(1);
+                        axios.post('/wap/topic/submitQuestions', data).then(function (res) {
+                            var resData = res.data;
+                            if (200 === resData.code) {
+                                question.is_correct = data.is_correct;
+                                if (vm.activeIndex !== vm.questions.length - 1) {
+                                    if (!vm.questions[vm.activeIndex + 1].is_correct) {
+                                        vm.swiper.slideNext();
+                                    }
+                                }
+                            } else {
+                                layer.msg(resData.msg);
+                            }
+                        }).catch(function (err) {
+
+                        }).then(function () {
+                            layer.close(index);
+                        })
+                    } else {
+                        layer.msg('请选择答案');
+                    }
+                }
+            }
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,1198 @@
+{extend name="public/container"}
+{block name="style"}
+<style>
+    .prism-player{
+        width: 100%;
+        height: 100%;
+    }
+</style>
+{/block}
+{block name="app"}
+<div class="lesson-header">
+    {include file='public/top' /}
+</div>
+<div class="lesson-body liveroom">
+    <div class="lesson-main">
+        <div class="liveroom-left">
+            <div class="lesson-focus-top">
+                <div class="liveroom-title">
+                    {{ liveInfo.live_title }}
+                </div>
+                <div class="liveroom-info">
+                    <div v-if="lecturer.lecturer_head" class="liveroom-avatar">
+                        <img :src="fx_cdn_img(lecturer.lecturer_head)" :alt="lecturer.lecturer_name">
+                    </div>
+                    <div v-if="lecturer.lecturer_name" class="liveroom-meta liveroom-teacher-name">
+                        <span>{{ lecturer.lecturer_name }}</span>
+                    </div>
+                    <div v-if="user_type == 1" class="liveroom-meta liveroom-teacher-role">
+                        <span>讲师</span>
+                    </div>
+                    <div v-else-if="user_type == 0" class="liveroom-meta liveroom-teacher-role">
+                        <span>助教</span>
+                    </div>
+                    <div class="liveroom-meta">
+                        <span class="iconfont">&#xe74e;</span>
+                        <span>直播时间：</span>
+                        <span>{{ liveInfo.start_play_time }}-{{ liveInfo.stop_play_time }}</span>
+                    </div>
+                    <div class="liveroom-meta">
+                        <span class="iconfont">&#xe642;</span>
+                        <span>{{ UserSum }}人</span>
+                    </div>
+                </div>
+                <a class="liveroom-goback" :href="router.view_course + '?id='+liveInfo.special_id">返回</a>
+            </div>
+            <div class="lesson-player-box" :style="{height: video_height+ 'px'}">
+                <div v-if="liveInfo.is_play || liveInfo.is_playback" class="prism-player" id="J_prismPlayer">
+                    {if condition="!$is_close_watermark"}
+                    <div class="video-watermark" id="video-watermark">
+                        {if condition="$is_site_watermark"}
+                        <div>{$Auth_site_name}</div>
+                        {/if}
+                        {if condition="$is_account_watermark"}
+                        <div>{$userInfo.account ? $userInfo.account : ''}</div>
+                        {/if}
+                    </div>
+                    {/if}
+                </div>
+                <template v-else>
+                    <div v-if="live_status == 0" class="liveroom-notice">直播即将开始</div>
+                    <div v-else-if="live_status == -1 || live_status == 1" class="liveroom-notice">暂时离开，马上回来</div>
+                    <div v-else-if="live_status == 2" class="liveroom-notice">直播已结束</div>
+                </template>
+            </div>
+            <div class="liveroom-functions">
+                <!-- 礼物 -->
+                <div class="liveroom-functions-gifts">
+                    <div class="swiper-container">
+                        <div class="swiper-wrapper">
+                            <div v-for="item in giftList" :key="item.id" class="swiper-slide">
+                                <el-popover placement="top-start" width="368" trigger="hover" popper-class="gift-popover">
+                                    <div class="gift-info">
+                                        <img :src="item.live_gift_show_img" :alt="item.live_gift_name">
+                                        <span>{{ item.live_gift_name }}</span>
+                                        <span>（{{ item.live_gift_price }}{{ goldInfo.gold_name }}/个）</span>
+                                    </div>
+                                    <div class="gift-size">
+                                        <div class="radio-group">
+                                            <label v-for="num in item.live_gift_num" :key="num">
+                                                <input v-model="giftRadio" :value="num" type="radio" hidden>
+                                                <span>{{ num }}</span>
+                                            </label>
+                                        </div>
+                                        <input v-model.number="giftInput" type="number" min="1" step="1" @focus="giftRadio = ''" @blur="!giftInput || 0 >= giftInput ? giftInput = 1 : null">
+                                        <button @click="sendGift(item)">赠送</button>
+                                    </div>
+                                    <img slot="reference" :src="item.live_gift_show_img" :alt="item.live_gift_name" :title="item.live_gift_name">
+                                </el-popover>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-button-next"></div>
+                </div>
+                <!-- 金币 -->
+                <div class="liveroom-charge">
+                    <div class="liveroom-charge-item">
+                        <div class="liveroom-charge-icon">
+                            <img :src="goldInfo.gold_image" :alt="goldInfo.gold_name">
+                        </div>
+                        <div class="liveroom-charge-txt">
+                            <span>{{ userInfo.gold_num }}</span>
+                        </div>
+                    </div>
+                    <div class="liveroom-charge-item" @click="rechargeIcon">
+                        <div class="liveroom-charge-icon">
+                            <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/recharge.png" alt="充值">
+                        </div>
+                        <div class="liveroom-charge-txt">
+                            <span>充值</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="liveroom-right">
+            <div class="lesson-focus-main">
+                <div class="lesson-catalog">
+                    <div class="liveroom-tab-box">
+                        <div class="liveroom-tab">
+                            <div class="liveroom-tab-item" v-for="(item, index) in tapList" :key="index" :class="{ 'active': selectTapId == item.id }" @click="handleSelectTap(item)">
+                                <span>{{item.label}}</span>
+                            </div>
+                        </div>
+                        <!-- 互动 -->
+                        <div ref="chatContent1" class="liveroom-talk-body" v-show="selectTapId == 1" @scroll="chatContentScroll1" :style="{height: video_height+ 'px'}">
+                            <div :class="{ right_box: item.uid == userInfo.uid }" class="liveroom-talk-body-item" v-for="(item, index) in messageList" :key="item.id">
+                                <div class="liveroom-talk-body-item-avator">
+                                    <img :src="fx_cdn_img(item.avatar)" :alt="item.nickname">
+                                </div>
+                                <div class="liveroom-talk-body-item-msg">
+                                    <div class="talk-user-info">
+                                        <div class="talk-nickname">{{ item.nickname }}</div>
+                                        <div v-if="item.user_type == 1" class="identity">
+                                            <span>讲师</span>
+                                        </div>
+                                        <div v-if="item.user_type == 0" class="identity">
+                                            <span>助教</span>
+                                        </div>
+                                    </div>
+                                    <div class="talk-msg" v-if="item.type == 1">
+                                        <span v-html="item.content"></span>
+                                    </div>
+                                    <div class="talk-msg" v-else-if="item.type == 2">
+                                        <img :src="item.content" alt="">
+                                    </div>
+                                    <div class="gift" v-else-if="item.type == 4">
+                                        <div>{{ item.content }}</div>
+                                        <div>
+                                            <img :src="item.gift_image" :alt="item.gift_name">
+                                        </div>
+                                        <div>
+                                            <span>×{{ item.gift_num }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 互动结束 -->
+                        <!-- 嘉宾开始 -->
+                        <div ref="chatContent2" class="liveroom-talk-body" v-show="selectTapId == 2" @scroll="chatContentScroll2" :style="{height: (video_height)+ 'px'}">
+                            <div class="liveroom-talk-body-item" v-for="(item, index) in classChatList" :key="item.id">
+                                <div class="liveroom-talk-body-item-avator">
+                                    <img :src="fx_cdn_img(item.avatar)" :alt="item.nickname">
+                                </div>
+                                <div class="liveroom-talk-body-item-msg">
+                                    <div class="talk-user-info">
+                                        <div class="talk-nickname">{{ item.nickname }}</div>
+                                        <div v-if="item.user_type == 1" class="identity">
+                                            <span>讲师</span>
+                                        </div>
+                                        <div v-if="item.user_type == 0" class="identity">
+                                            <span>助教</span>
+                                        </div>
+                                    </div>
+                                    <div class="talk-msg" v-if="item.type == 1">
+                                        <span v-html="item.content"></span>
+                                    </div>
+                                    <div class="talk-msg" v-else-if="item.type == 2">
+                                        <img :src="item.content" alt="">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 嘉宾结束 -->
+                        <!-- 橱窗开始 -->
+                        <div class="liveroom-talk-body liveroom-talk-body3" v-show="selectTapId == 3" :style="{height: (video_height+100)+ 'px'}">
+                            <div class="recommend liveroom-recommend">
+                                <div class="recommend-box">
+                                    <ul class="course-list agency" v-if="goodsList.length">
+                                        <li v-for="item in goodsList" :key="item.id">
+                                            <section class="course-card-expo-wrapper">
+                                                <a class="kc-course-card" href="javascript:;" @click="goSpecial(item)">
+                                                    <div class="kc-course-card-cover">
+                                                        <img :src="item.image" :alt="item.title">
+                                                    </div>
+                                                    <div class="kc-course-card-content">
+                                                        <h3 class="kc-course-card-name" :title="item.title">{{item.title}}</h3>
+                                                        <div class="kc-course-card-footer">
+                                                            <div class="kc-coursecard-footer-left">
+                                                                <span class="kc-course-card-price">
+                                                                    <span class="kc-coursecard-price-icon">
+                                                                        <span class="coursedot">¥</span>
+                                                                    </span>
+                                                                    <span>{{item.money}}</span>
+                                                                </span>
+                                                                <span class="kc-course-card-student">{{item.browse_count}}人浏览</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </section>
+                                        </li>
+                                    </ul>
+                                    <el-empty v-else image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="橱窗是空的～"></el-empty>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 橱窗结束 -->
+                        <!-- 榜单开始 -->
+                        <div class="liveroom-talk-body liveroom-talk-body4" :style="{height: (video_height+100)+ 'px'}" v-show="selectTapId == 4" v-infinite-scroll="get_live_reward" :infinite-scroll-immediate="liveRewardFinished">
+                            <template v-if="liveRewardList.length">
+                                <div v-for="(item, index) in liveRewardList" class="liveroom-talk-body-item">
+                                    <div v-if="index + 1 == 1" class="liveroom-talk-body-rank">
+                                        <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/live_rank1.png" alt="">
+                                    </div>
+                                    <div v-else-if="index + 1 == 2" class="liveroom-talk-body-rank">
+                                        <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/live_rank2.png" alt="">
+                                    </div>
+                                    <div v-else-if="index + 1 == 3" class="liveroom-talk-body-rank">
+                                        <img src="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/live_rank3.png" alt="">
+                                    </div>
+                                    <div v-else class="liveroom-talk-body-rank">
+                                        <span>{{ index + 1 > 9 ? index + 1 : '0' + (index + 1) }}</span>
+                                    </div>
+                                    <div class="liveroom-talk-body-user">
+                                        <div class="avatar">
+                                            <img :src="fx_cdn_img(item.avatar)" :alt="item.nickname">
+                                        </div>
+                                        <div class="talk-nickname">
+                                            <span>{{ item.nickname }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="liveroom-talk-body-contribute">
+                                        <span>{{ item.total_price }}</span>
+                                        <img :src="goldInfo.gold_image" :alt="goldInfo.gold_name">
+                                    </div>
+                                </div>
+                            </template>
+                            <el-empty v-else image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="还没收到礼物～"></el-empty>
+                        </div>
+                        <!-- 榜单结束 -->
+                        <div v-show="selectTapId == 1 || (selectTapId == 2 && (user_type == 0 || user_type == 1))" class="liveroom-talk-bt">
+                            <div class="liveroom-talk-bt-head">
+                                <div class="talk-emoji">
+                                    <el-popover placement="top" width="332" trigger="hover" popper-class="emoji-popover">
+                                        <img v-for="item in emojiList" :src="item.url" :alt="item.name" :title="item.name" @click="sendEmoji(item)">
+                                        <span slot="reference" class="talk-emoji-face"></span>
+                                    </el-popover>
+                                    <el-upload action="" :show-file-list="false" :http-request="httpRequest">
+                                        <span class="talk-emoji-face talk-picture"></span>
+                                    </el-upload>
+                                </div>
+                            </div>
+                            <div class="liveroom-talk-bt-input">
+                                <input v-model="message" type="text" @keyup.enter="sendMessage">
+                                <button @click="sendMessage">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--<div class="section-main">-->
+<!--    <div class="detail js-hook-detail">-->
+<!--        <div class="detail-tabs">-->
+<!--            <div class="tabs-container">-->
+<!--                <div class="tabs-wrap">-->
+<!--                    <div class="detail-tab" :class="{active: currentTab=='intro'}" @click="currentTab='intro'">课程介绍</div>-->
+<!--                    <div class="detail-tab" :class="{active: currentTab=='replay'}" @click="currentTab='replay'">-->
+<!--                        <span class="catalog-tab-title has-trial">直播回放</span>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="detail-tab-panel-container">-->
+<!--            <div class="switch-panel" v-show="currentTab=='intro'">-->
+<!--                <div class="course-detail" v-html="liveInfo.content"></div>-->
+<!--            </div>-->
+<!--            <div class="switch-panel" v-show="currentTab=='replay'">-->
+<!--                <template v-if="courseList.length">-->
+<!--                    <div v-for="item in courseList" :key="item.id" class="task-item" @click="selectCourse(item)">-->
+<!--                        <div class="task-item-sub">-->
+<!--                            <div class="task-item-sub-main">-->
+<!--                                <div class="task-item-sub-main-type">-->
+<!--                                    <i class="el-icon-refresh" title="回放"></i>-->
+<!--                                </div>-->
+<!--                                <div class="task-item-sub-main-title">-->
+<!--                                    <span>{{ item.playback_name || special.title }}</span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                            <div class="task-item-sub-type">-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </template>-->
+<!--                <el-pagination-->
+<!--                        v-if="courseList.length"-->
+<!--                        :current-page.sync="liveRecordPage"-->
+<!--                        :page-size="limit"-->
+<!--                        :total="total"-->
+<!--                        layout="prev, pager, next"-->
+<!--                        @current-change="get_live_record_list">-->
+<!--                </el-pagination>-->
+<!--                <el-empty v-else image="{$Think.const.IMG_DOMAIN}{__PUBLIC_WEB_PATH}pc/images/empty4.png" description="暂无直播回放～"></el-empty>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    <aside>-->
+<!--        -->
+<!--    </aside>-->
+<!--</div>-->
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData"
+            @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'api/auth',
+        'api/live',
+        'scripts/util',
+        'swiper',
+        '../wap/face/emoji',
+        'api/special',
+        'css!styles/classroom.css'
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, authApi, liveApi, util, Swiper, emoji, specialApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin],
+            data: {
+                currentTab: 'intro',
+                CommentCount: 0,
+                CommentTime: 0,
+                OpenCommentCount: 0,
+                OpenCommentTime: 0,
+                PullUrl: '',
+                UserSum: '0',
+                goldInfo: {},
+                lecturer: {},
+                liveInfo: {},
+                live_status: -1,
+                user_type: -1,
+                workerman: {},
+                openCommentPage: 1,
+                commentPage: 1,
+                liveRewardPage: 1,
+                liveRecordPage: 1,
+                limit: 15,
+                openCommentLoading: false,
+                openCommentFinished: false,
+                commentLoading: false,
+                commentFinished: false,
+                liveRewardFinished: false,
+                liveRecordFinished: false,
+                goodsList: [],
+                liveRewardList: [],
+                tipLeft: 0,
+                selectValue: 1,
+                tipList: [
+                    {
+                        title: '回放目录',
+                        value: 2
+                    },
+                    {
+                        title: '直播介绍',
+                        value: 1
+                    },
+                ],
+                userId: 1,
+                selectTapId: 1,
+                tapList: [
+                    {
+                        id: 1,
+                        label: '互动'
+                    },
+                    {
+                        id: 2,
+                        label: '嘉宾'
+                    },
+                    {
+                        id: 3,
+                        label: '橱窗'
+                    },
+                    {
+                        id: 4,
+                        label: '榜单'
+                    }
+                ],
+                messageList: [],
+                classChatList: [],
+                giftList: [],
+                timeOut: '',
+                // 课程列表
+                courseList: [],
+                message: '',
+                giftRadio: '',
+                giftInput: 1,
+                emojiList: [],
+                isHandshake: false,
+                total: 0,
+                webSocket: null,
+                video_height: 0,
+                seeked: false,
+                // 虚拟直播对象
+                fake_video: null,
+                duration: 0,
+                // 设置播放器当前播放时间
+                seekTime: 0,
+                // 是否第一次轮训直播室信息
+                isFirst: true,
+                isPaused: false,
+            },
+            computed: {
+                isSocket: function () {
+                    return this.workerman.port && this.room && this.userInfo.uid;
+                }
+            },
+
+            watch: {
+                selectValue: {
+                    handler(val) {
+                        this.$nextTick(() => {
+                            this.tipLeft = this.$refs[`react${val}`][0].offsetLeft + 'px';
+                        })
+                    },
+                    immediate: false
+                },
+                isSocket: function (val) {
+                    if (val) {
+                        vm.createSocket(vm.workerman.port, vm.userInfo.uid, vm.room);
+                        vm.get_live_reward();
+                    }
+                }
+            },
+            created: function () {
+                this.stream_name = util.getParmas('stream_name');
+                this.record_id = util.getParmas('record_id');
+                this.live_studio_index();
+                this.live_gift_list();
+                var emojiList = [];
+                emoji.forEach(function (item) {
+                    emojiList = emojiList.concat(item);
+                });
+                this.emojiList = emojiList;
+            },
+            mounted: function () {
+                this.resetVideoSize()
+                window.addEventListener('resize', this.resetVideoSize);
+            },
+            methods: {
+                // 虚拟直播播放器部分
+                // 获取playauth
+                get_video_playback_credentials: function (videoId) {
+                    var vm = this;
+                    specialApi.get_video_playback_credentials({
+                        videoId: videoId,
+                        type: 2
+                    }).then(function (res) {
+                        var request = new XMLHttpRequest();
+                        request.onreadystatechange = function () {
+                            if (request.readyState == 4 && request.status == 200) {
+                                try {
+                                    var data = JSON.parse(request.responseText);
+                                    vm.duration = data.VideoMeta.Duration;
+                                    vm.createPlayer(data.PlayAuth);
+                                } catch (error) {
+                                    vm.$message.error(error);
+                                }
+                            }
+                        };
+                        request.open('GET', res.msg, true);
+                        request.send();
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 创建播放器
+                createPlayer: function (playauth) {
+                    var vm = this;
+                    var options = {
+                        id: 'J_prismPlayer',
+                        vid: vm.liveInfo.videoId,
+                        playauth: playauth || '',
+                        autoplay: true,
+                        height: '100%',
+                        controlBarVisibility: 'always',
+                        format: ''
+                    };
+                    if(vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                        options.vid = '';
+                        options.source = vm.liveInfo.link;
+                        options.encryptType = 0;
+                    }
+                    if(vm.liveInfo.video_type === 2) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.liveInfo.video_type === 3) {
+                        options.encryptType = 1;
+                        options.playConfig = {EncryptType:'AliyunVoDEncryption'};
+                        var check = function () {
+                            function doCheck(a) {
+                                if (("" + a / a)["length"] !== 1 || a % 20 === 0) {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                } else {
+                                    (function () {}
+                                        ["constructor"]("debugger")())
+                                }
+                                doCheck(++a)
+                            }
+                            try {
+                                doCheck(0)
+                            } catch (err) {}
+                        };
+                        check();
+                    }
+
+                    // 判断是否正在直播，控制状态栏
+                    if (vm.liveInfo.is_play) {
+                        options.skinLayout = [
+                            {name: "bigPlayButton", align: "blabs", x: 30, y: 80},
+                            {
+                                name: "H5Loading", align: "cc"
+                            },
+                            {name: "errorDisplay", align: "tlabs", x: 0, y: 0},
+                            {name: "infoDisplay"},
+                            {name:"tooltip", align:"blabs",x: 0, y: 56},
+                            {name: "thumbnail"},
+                            {
+                                name: "controlBar", align: "blabs", x: 0, y: 0,
+                                children: [
+                                    { name: "liveDisplay", align: "tlabs", x: 15, y: 6 },
+                                    { name: "fullScreenButton", align: "tr", x: 10, y: 10 },
+                                    { name: "volume", align: "tr", x: 5, y: 10 }
+                                ]
+                            }
+                        ]
+                    }
+
+                    // ios
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+                        options.encryptType = 0;
+                        options.playConfig = {EncryptType:'Unencrypted'};
+                    }
+                    if (vm.fake_video) {
+                        vm.fake_video.dispose();
+                        vm.fake_video = null;
+                    }
+
+                    vm.fake_video = new Aliplayer(options, function (player) {
+                        player.mute()
+                        // 对免流播放进行特殊处理
+                        if (vm.liveInfo.video_type === 4) {
+                            setInterval(function (){
+                                // 每隔10分钟重新获取播放地址，防止鉴权过期
+                                liveApi.live_studio_index({
+                                    stream_name: vm.stream_name,
+                                    record_id: vm.record_id,
+                                }).then(function (res) {
+                                    // 获取当前播放的时间
+                                    var currentTime = vm.fake_video.getCurrentTime();
+                                    let link = JSON.parse(res.data.liveInfo.link);
+                                    let play_url = '';
+                                    for (let key in link) {
+                                        play_url = link[key];
+                                    }
+                                    vm.fake_video.loadByUrl(play_url, currentTime)
+                                    var status = vm.fake_video.getStatus();
+                                    if (!vm.liveInfo.is_play && (status === 'ended' || status === 'pause')) {
+                                        vm.isPaused = true;
+                                    }
+                                })
+                            }, 60 * 10 * 1000)
+                        }
+                    });
+                    vm.fake_video.on('ready', vm.onPlayerReady);
+                    vm.fake_video.on('canplay', vm.onPlayerCanplay);
+                    vm.fake_video.on('ended', vm.onPlayerEnded);
+                    vm.fake_video.on('timeupdate', vm.onPlayerTimeupdate);
+                },
+                onPlayerReady: function (e) {
+                    var vm = this;
+                    vm.duration = vm.fake_video.getDuration();
+                },
+                onPlayerCanplay: function () {
+                    var vm = this;
+                    // 判断是否正在直播
+                    if (vm.liveInfo.is_play) {
+                        vm.fake_video.seek(vm.seekTime / 1000)
+                    } else {
+                        // 直播已结束
+                        console.log('直播已结束')
+                        if (vm.isPaused) {
+                            vm.fake_video.pause();
+                        }
+                    }
+                },
+                onPlayerEnded: function () {
+                    var vm = this;
+                },
+                onPlayerTimeupdate: function () {
+                },
+                resetVideoSize: function () {
+                    var fullWidth = window.innerWidth - 360 - 350;
+                    var videoHeight = fullWidth * 9 / 16
+                    this.video_height = videoHeight
+                },
+                // 直播间信息
+                live_studio_index: function () {
+                    var vm = this;
+                    liveApi.live_studio_index({
+                        stream_name: vm.stream_name,
+                        record_id: vm.record_id,
+                    }).then(function (res) {
+                        var data = res.data;
+                        vm.CommentCount = data.CommentCount;
+                        vm.CommentTime = data.CommentTime || 0;
+                        vm.OpenCommentCount = data.OpenCommentCount;
+                        vm.OpenCommentTime = data.OpenCommentTime || 0;
+                        vm.PullUrl = data.PullUrl;
+                        vm.UserSum = data.UserSum;
+                        vm.goldInfo = data.goldInfo;
+                        vm.is_ban = data.is_ban;
+                        vm.lecturer = data.lecturer;
+                        vm.liveInfo = data.liveInfo;
+                        vm.live_status = data.live_status;
+                        vm.room = data.room;
+                        vm.user_type = data.user_type;
+                        vm.workerman = data.workerman;
+                        vm.get_open_comment_list();
+                        vm.get_comment_list();
+                        vm.live_goods_list();
+                        vm.get_live_record_list();
+                        document.title = vm.liveInfo.live_title;
+                        // 虚拟直播处理
+                        // 第一次加载时候才计算进度和创建播放器
+                        if (vm.liveInfo.is_fake && vm.isFirst) {
+                            // 判断当前直播是否在直播时间内
+                            var start_play_time = new Date(vm.liveInfo.start_play_time).getTime();
+                            var stop_play_time = new Date(vm.liveInfo.stop_play_time).getTime();
+                            var current_time = new Date(vm.liveInfo.current_time).getTime();
+
+                            vm.liveInfo.is_play = current_time >= start_play_time && current_time < stop_play_time;
+                            vm.liveInfo.is_playback = current_time >= stop_play_time;
+                            // 计算播放器进度
+                            if (vm.liveInfo.is_play) {
+                                vm.seekTime = current_time - start_play_time;
+                            }
+                            // 处理观看回放逻辑
+                            if (current_time >= stop_play_time) {
+                                vm.$confirm('直播已结束，是否观看回放？', '提示', {
+                                    confirmButtonText: '观看回放',
+                                    cancelButtonText: '取消',
+                                    type: 'warning'
+                                }).then(() => {
+                                    vm.liveInfo.is_playback = true
+                                    if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                                        vm.$nextTick(function () {
+                                            vm.createPlayer();
+                                        })
+                                        return
+                                    }
+                                    vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                                }).catch(function () {
+                                    vm.liveInfo.is_playback = false
+                                })
+                                vm.isFirst = false
+                                return
+                            }
+                            // 处理直播未开始，进入倒计时状态
+                            if (current_time < start_play_time) {
+                                vm.liveInfo.is_play = false;
+                                vm.liveInfo.is_playback = false;
+                                var countdown_time = start_play_time - current_time;
+                                var countdown_timer = setInterval(function () {
+                                    countdown_time -= 1000;
+                                    if(countdown_time <= 0) {
+                                        vm.liveInfo.is_play = true;
+                                        vm.liveInfo.is_playback = false;
+                                        clearInterval(countdown_timer);
+                                        if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                                            vm.$nextTick(function () {
+                                                vm.createPlayer();
+                                            })
+                                            vm.isFirst = false
+                                            return
+                                        }
+                                        vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                                        vm.isFirst = false
+                                    }
+                                }, 1000)
+                                return
+                            }
+                            if (vm.liveInfo.video_type === 1 || vm.liveInfo.video_type === 4) {
+                                vm.$nextTick(function () {
+                                    vm.createPlayer();
+                                })
+                                vm.isFirst = false
+                                return
+                            }
+                            vm.get_video_playback_credentials(vm.liveInfo.videoId);
+                            vm.isFirst = false
+                            return
+                        }
+                        if (vm.liveInfo.is_play) {
+                            vm.$nextTick(function () {
+                                vm.player = new Aliplayer({
+                                    id: 'J_prismPlayer',
+                                    height: '100%',
+                                    autoplay: true,
+                                    isLive: true,
+                                    source: vm.PullUrl
+                                }, function () {
+                                    console.log('播放器创建好了。')
+                                });
+                            });
+                        } else if (vm.liveInfo.is_playback) {
+                            vm.$nextTick(function () {
+                                vm.player = new Aliplayer({
+                                    id: 'J_prismPlayer',
+                                    height: '100%',
+                                    autoplay: true,
+                                    isLive: false,
+                                    source: vm.PullUrl
+                                }, function () {
+                                    console.log('播放器创建好了。')
+                                });
+                            });
+                        }
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 礼物
+                live_gift_list: function () {
+                    var vm = this;
+                    liveApi.live_gift_list().then(function (res) {
+                        var data = res.data;
+                        data.forEach(function (item) {
+                            item.visible = false;
+                        });
+                        vm.giftList = res.data;
+                        vm.$nextTick(function () {
+                            var mySwiper = new Swiper ('.swiper-container', {
+                                slidesPerView: 'auto',
+                                spaceBetween: 10,
+                                navigation: {
+                                    nextEl: '.swiper-button-next',
+                                    prevEl: '.swiper-button-prev'
+                                },
+                                observer: true,
+                                observeParents: true,
+                                observeSlideChildren: true
+                            })
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 聊天
+                get_open_comment_list: function () {
+                    var vm = this;
+                    if (vm.openCommentLoading || vm.openCommentFinished) {
+                        return;
+                    }
+                    vm.openCommentLoading = true;
+                    liveApi.get_open_comment_list({
+                        page: vm.openCommentPage++,
+                        limit: vm.limit,
+                        live_id: vm.room,
+                        add_time: vm.OpenCommentTime
+                    }).then(function (res) {
+                        var list = res.data.list;
+                        vm.openCommentLoading = false;
+                        vm.openCommentFinished = vm.limit > list.length;
+                        vm.scrollHeight1 = vm.$refs.chatContent1.scrollHeight;
+                        list.forEach(function (item) {
+                            if (item.type == 1) {
+                                item.content = vm.replace_em(item.content);
+                            }
+                            vm.messageList.unshift(item);
+                        });
+                        vm.$nextTick(function () {
+                            vm.$refs.chatContent1.scrollTop = vm.$refs.chatContent1.scrollHeight - vm.scrollHeight1;
+                            for (var i = vm.$refs.chatContent1.getElementsByTagName('img').length; i--;) {
+                                vm.$refs.chatContent1.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                    vm.$refs.chatContent1.scrollTop = vm.$refs.chatContent1.scrollHeight - vm.scrollHeight1;
+                                    vm.scrollTop1 = vm.$refs.chatContent1.scrollTop;
+                                });
+                            }
+                        });
+                        if (vm.openCommentPage == 2) {
+                            if (vm.webSocket && vm.webSocket.readyState == 1) {
+                                vm.webSocket.send(JSON.stringify({
+                                    type: 'room_user_count',
+                                    uid: vm.userInfo.uid,
+                                    room: vm.room
+                                }));
+                            }
+                        }
+                    });
+                },
+                // 课堂
+                get_comment_list: function () {
+                    var vm = this;
+                    if (vm.commentLoading || vm.commentFinished) {
+                        return;
+                    }
+                    vm.commentLoading = true;
+                    liveApi.get_comment_list({
+                        page: vm.commentPage++,
+                        limit: vm.limit,
+                        live_id: vm.liveInfo.id,
+                        add_time: vm.CommentTime
+                    }).then(function (res) {
+                        var list = res.data.list;
+                        vm.commentLoading = false;
+                        vm.commentFinished = vm.limit > list.length;
+                        vm.scrollHeight2 = vm.$refs.chatContent2.scrollHeight;
+                        list.forEach(function (item) {
+                            if (item.type == 1) {
+                                item.content = vm.replace_em(item.content);
+                            }
+                            vm.classChatList.unshift(item);
+                        });
+                        vm.$nextTick(function () {
+                            vm.$refs.chatContent2.scrollTop = vm.$refs.chatContent2.scrollHeight - vm.scrollHeight2;
+                            for (var i = vm.$refs.chatContent2.getElementsByTagName('img').length; i--;) {
+                                vm.$refs.chatContent2.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                    vm.$refs.chatContent2.scrollTop = vm.$refs.chatContent2.scrollHeight - vm.scrollHeight2;
+                                    vm.scrollTop2 = vm.$refs.chatContent2.scrollTop;
+                                });
+                            }
+                        });
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 讲师推荐
+                live_goods_list: function () {
+                    var vm = this;
+                    liveApi.live_goods_list({
+                        live_id: vm.liveInfo.id,
+                    }).then(function (res) {
+                        vm.goodsList = res.data.list;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 排行榜
+                get_live_reward: function () {
+                    var vm = this;
+                    liveApi.get_live_reward({
+                        uid: vm.userInfo.uid,
+                        live_id: vm.liveInfo.id,
+                        page: vm.liveRewardPage++,
+                        limit: vm.limit
+                    }).then(function (res) {
+                        var list = res.data.list;
+                        vm.liveRewardFinished = vm.limit > list.length;
+                        vm.liveRewardList = vm.liveRewardList.concat(list);
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 回放目录
+                get_live_record_list: function () {
+                    var vm = this;
+                    liveApi.get_live_record_list({
+                        special_id: vm.liveInfo.special_id,
+                        page: vm.liveRecordPage,
+                        limit: vm.limit
+                    }).then(function (res) {
+                        vm.courseList = res.data.data;
+                        vm.total = res.data.count;
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                send: function (params) {
+                    this.webSocket.send(JSON.stringify(params));
+                },
+                heartbeat: function () {
+                    var vm = this;
+                    setInterval(function () {
+                        vm.send({
+                            type: 'ping'
+                        });
+                    }, 3000);
+                },
+                // websocket
+                createSocket: function (port, uid, room) {
+                    var vm = this;
+                    vm.webSocket = new WebSocket((window.location.protocol == 'http:' ? 'ws' : 'wss') + '://' + window.location.hostname + '/wyws' + '?room=' + room + '&uid=' + uid);
+                    vm.webSocket.onopen = function () {
+                        vm.webSocket.send(JSON.stringify({
+                            room: room,
+                            uid: uid,
+                            type: 'handshake',
+                            role: 'user'
+                        }));
+                        setInterval(function () {
+                            vm.webSocket.send(JSON.stringify({
+                                type: 'ping'
+                            }));
+                        }, 3e3);
+                    };
+                    vm.webSocket.onmessage = function (event) {
+                        try {
+                            var data = JSON.parse(event.data);
+                            switch (data.type) {
+                                case 'init':
+
+                                    break;
+                                case 'ping':
+
+                                    break;
+                                case 'handshake':
+                                    vm.isHandshake = true;
+                                    break;
+                                case 'reception':
+
+                                    break;
+                                // 直播进行中
+                                case 'live_ing':
+                                    vm.changeLive(true, data.pull_url);
+                                    break;
+                                // 直播结束
+                                case 'live_end':
+                                    vm.changeLive();
+                                    break;
+                                // 消息提醒
+                                case 'message':
+                                    vm.receiveMessage(data);
+                                    break;
+                                // 消息撤回
+                                case 'recall':
+                                    vm.changeLive(false);
+                                    break;
+                                case 'ban':
+                                    vm.changeLive(false);
+                                    break;
+                                // 欢迎用户进入
+                                case 'room_user_count':
+                                    vm.receiveWelcome(data);
+                                    break;
+                                // 打赏
+                                case 'live_reward':
+                                    vm.receiveGift(data);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        } catch (error) {
+                            vm.$message.error(error);
+                        }
+                    };
+                    vm.webSocket.onclose = function () {
+                        vm.createSocket(vm.workerman.port, vm.userInfo.uid, vm.room);
+                    };
+                    vm.webSocket.onerror = function () {
+                        console.error();('WebSocket 出错');
+                    };
+                },
+                handleSelectTap(item) {
+                    this.selectTapId = item.id;
+                },
+                selectTip(item, index) {
+                    this.selectValue = item.value
+                },
+                // 展开选中得课程
+                selectCourse(item) {
+                    vm.PullUrl = item.playback_url;
+                    if (vm.player) {
+                        vm.player.dispose();
+                        vm.player = null;
+                    }
+                    vm.player = new Aliplayer({
+                        id: 'J_prismPlayer',
+                        height: '100%',
+                        autoplay: true,
+                        isLive: false,
+                        source: vm.PullUrl
+                    }, function () {
+                        console.log('播放器创建好了。')
+                    });
+                },
+                // 点击发送
+                sendMessage: function () {
+                    if (this.is_ban) {
+                        this.$message('您已被禁言！');
+                        return;
+                    }
+                    if (!this.message.trim()) {
+                        return;
+                    }
+                    this.webSocket.send(JSON.stringify({
+                        uid: this.userInfo.uid,
+                        type: 'send',
+                        ms_type: 1,
+                        content: this.message,
+                        room: this.room
+                    }));
+                    this.message = '';
+                },
+                // 接收消息
+                receiveMessage: function (data) {
+                    this.messageList.push({
+                        id: data.id,
+                        uid: data.userInfo.uid,
+                        avatar: data.userInfo.avatar,
+                        nickname: data.userInfo.nickname,
+                        user_type: data.user_type,
+                        content: data.m_type == 1 ? this.replace_em(data.message) : data.message,
+                        type: data.m_type
+                    });
+                    if (data.user_type == 0 || data.user_type == 1) {
+                        this.classChatList.push({
+                            avatar: data.userInfo.avatar,
+                            nickname: data.userInfo.nickname,
+                            content: data.m_type == 1 ? this.replace_em(data.message) : data.message,
+                            user_type: data.user_type,
+                            type: data.m_type
+                        });
+                        this.$nextTick(function () {
+                            this.$refs.chatContent2.scrollTop = this.$refs.chatContent2.scrollHeight - this.$refs.chatContent2.offsetHeight;
+                            for (var i = this.$refs.chatContent2.getElementsByTagName('img').length; i--;) {
+                                this.$refs.chatContent2.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                    vm.$refs.chatContent2.scrollTop = vm.$refs.chatContent2.scrollHeight - vm.$refs.chatContent2.offsetHeight;
+                                });
+                            }
+                        });
+                    }
+                    this.$nextTick(function () {
+                        this.$refs.chatContent1.scrollTop = this.$refs.chatContent1.scrollHeight - this.$refs.chatContent1.offsetHeight;
+                        for (var i = this.$refs.chatContent1.getElementsByTagName('img').length; i--;) {
+                            this.$refs.chatContent1.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                vm.$refs.chatContent1.scrollTop = vm.$refs.chatContent1.scrollHeight - vm.$refs.chatContent1.offsetHeight;
+                            });
+                        }
+                    });
+                },
+                // 点击充值
+                rechargeIcon: function () {
+                    window.location.href = this.router.user + '?page=coin';
+                },
+                // 点击赠送
+                sendGift: function (gift) {
+                    var live_gift_num = this.giftInput;
+                    if (this.giftRadio) {
+                        if (parseInt(this.giftRadio) * parseFloat(gift.live_gift_price) > this.userInfo.gold_num) {
+                            this.$message('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                            return;
+                        }
+                        live_gift_num = this.giftRadio;
+                    } else {
+                        if (this.giftInput * parseFloat(gift.live_gift_price) > this.userInfo.gold_num) {
+                            this.$message('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                            return;
+                        }
+                    }
+                    this.webSocket.send(JSON.stringify({
+                        uid: this.userInfo.uid,
+                        type: 'live_reward',
+                        live_gift_id: gift.id,
+                        live_gift_num: live_gift_num,
+                        live_id: this.room,
+                        special_id: this.liveInfo.special_id
+                    }));
+                },
+                // 接收礼物
+                receiveGift: function (data) {
+                    if (!data.recharge_status) {
+                        this.$message('您的' + this.goldInfo.gold_name + '不足，请先去充值');
+                        return;
+                    }
+                    var gift = this.giftList.find(function (item) {
+                        return item.id == data.live_gift_id;
+                    });
+                    this.messageList.push({
+                        uid: data.uid,
+                        nickname: data.username,
+                        avatar: data.user_avatar,
+                        user_type: data.user_type,
+                        type: 4,
+                        content: '赠送给主播',
+                        gift_image: gift.live_gift_show_img,
+                        gift_name: gift.live_gift_name,
+                        gift_num: data.live_gift_num
+                    });
+                    this.$nextTick(function () {
+                        for (var i = this.$refs.chatContent1.getElementsByTagName('img').length; i--;) {
+                            this.$refs.chatContent1.getElementsByTagName('img')[i].addEventListener('load', function () {
+                                vm.$refs.chatContent1.scrollTop = vm.$refs.chatContent1.scrollHeight - vm.$refs.chatContent1.offsetHeight;
+                            });
+                        }
+                    });
+                    this.user_info();
+                },
+                // 接收欢迎语
+                receiveWelcome: function (data) {
+                    this.UserSum = data.onLine_user_count;
+                    this.messageList.push({
+                        uid: this.liveInfo.uid,
+                        nickname: this.lecturer.lecturer_name,
+                        avatar: this.lecturer.lecturer_head,
+                        user_type: data.user_type,
+                        type: 1,
+                        content: data.notice_content
+                    });
+                    this.$nextTick(function () {
+                        this.$refs.chatContent1.scrollTop = this.$refs.chatContent1.scrollHeight - this.$refs.chatContent1.offsetHeight;
+                    });
+                },
+                // 点击表情
+                sendEmoji: function (emoji) {
+                    this.message += emoji.type;
+                },
+                // 替换表情
+                replace_em: function (str) {
+                    str = str.replace(/\</g, '&lt;');
+                    str = str.replace(/\>/g, '&gt;');
+                    str = str.replace(/\n/g, '<br/>');
+                    str = str.replace(/\[qq_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji1/$1.gif' />");
+                    str = str.replace(/\[em_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji2/$1.png'  />");
+                    str = str.replace(/\[other_([0-9]*)\]/g, "<img class='img' src='/wap/face/emoji3/$1.png' />");
+                    return str;
+                },
+                // 聊天向下滚动
+                chatContentScroll1: function () {
+                    if (this.scrollTop1 > this.$refs.chatContent1.scrollTop && !this.$refs.chatContent1.scrollTop) {
+                        this.get_open_comment_list();
+                    }
+                },
+                // 课堂向下滚动
+                chatContentScroll2: function () {
+                    if (this.scrollTop2 > this.$refs.chatContent2.scrollTop && !this.$refs.chatContent2.scrollTop) {
+                        this.get_comment_list();
+                    }
+                },
+                // 点击讲师推荐的课程
+                goSpecial: function (special) {
+                    if (special.is_light) {
+                        window.location.href = router.single_course + '?id=' + special.id;
+                    } else {
+                        window.location.href = router.view_course + '?id=' + special.id;
+                    }
+                },
+                // 发送图片
+                httpRequest: function (elUpload) {
+                    var formData = new FormData();
+                    formData.append('file', elUpload.file)
+                    authApi.upload(formData).then(function (res) {
+                        vm.webSocket.send(JSON.stringify({
+                            uid: vm.userInfo.uid,
+                            type: 'send',
+                            ms_type: 2,
+                            content: res.data.url,
+                            room: vm.room
+                        }));
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                    });
+                },
+                // 直播状态改变
+                changeLive: function () {
+                    this.live_studio_index();
+                }
+            }
+        });
+    });
+</script>
+{/block}

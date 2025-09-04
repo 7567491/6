@@ -1,0 +1,111 @@
+{extend name="public/container"}
+{block name="title"}{$exam.title}-{$public_data.site_name}{/block}
+{block name="style"}
+<style>
+    body{
+        background-color: #f5f8fa;
+    }
+</style>
+{/block}
+{block name="app"}
+{include file='public/top' /}
+<div class="wy-exam-page">
+    <div class="wy-exam-detail-wrapper">
+        <div class="wy-exam-detail-title">{$exam.title}</div>
+        <div class="wy-exam-detail-meta">
+            <span>答题人数：{$exam.answer}</span>
+            <span>试题数量：{$exam.item_number}题</span>
+        </div>
+        <div class="wy-exam-detail-total">
+            <div class="wy-exam-total-item">
+                <div class="wy-exam-total-num">
+                    <em>{$exam.single_number}</em>题
+                </div>
+                <div class="wy-exam-total-label">
+                    单选题
+                </div>
+            </div>
+            <div class="wy-exam-total-item">
+                <div class="wy-exam-total-num">
+                    <em>{$exam.many_number}</em>题
+                </div>
+                <div class="wy-exam-total-label">
+                    多选题
+                </div>
+            </div>
+            <div class="wy-exam-total-item">
+                <div class="wy-exam-total-num">
+                    <em>{$exam.judge_number}</em>题
+                </div>
+                <div class="wy-exam-total-label">
+                    判断题
+                </div>
+            </div>
+        </div>
+        <div class="wy-exam-detail-go-wrap">
+            {if condition="($exam.isPay)"}
+            <a class="el-button el-button--primary is-round wy-exam-detail-go" href="{:url('/view-test')}?type=1&test_id={$exam.id}">开始练习</a>
+            {else /}
+            <div class="wy-exam-price">
+                <div class="wy-exam-normal-price">¥{$exam.money}</div>
+                <div class="wy-exam-vip-price">
+                    <span class="wy-exam-vip-price-label">VIP</span>
+                    <span class="wy-exam-vip-price-tag">¥{$exam.member_money}</span>
+                </div>
+            </div>
+            <a class="el-button el-button--primary is-round buy-exam" @click="goNext('{:url('/pay')}?type=2&is_test=1&id={$exam.id}')" href="javascript:;">购买练习</a>
+            {/if}
+        </div>
+        <div class="wy-exam-detail-go-wrap">
+        </div>
+    </div>
+    <div class="wy-exam-detail-tips">
+        <div class="wy-exam-detail-tips-title">答题说明：</div>
+        <ol>
+            <li>单选题（选项中只有1个正确答案)；</li>
+            <li>多选题（选项中至少有2个正确答案)；</li>
+            <li>判断题（选项中只有1个正确答案)。</li>
+        </ol>
+    </div>
+</div>
+{include file='public/footer' /}
+<base-login :login-visible="loginVisible" :agree-content="agreeContent" :public-data="publicData" @login-close="loginClose" @agree-open="agreeOpen"></base-login>
+<base-agree :agree-visible="agreeVisible" :agree-content="agreeContent" @agree-close="agreeClose"></base-agree>
+{/block}
+
+{block name="vm"}
+<script>
+    require([
+        'vue',
+        'ELEMENT',
+        'components/base_login/index',
+        'components/base_agree/index',
+        'mixins/base',
+        'mixins/router',
+        'api/home',
+    ], function (Vue, ELEMENT, BaseLogin, BaseAgree, baseMixin, routerMixin, homeApi) {
+        Vue.use(ELEMENT);
+        var vm = new Vue({
+            el: '#app',
+            components: {
+                'base-login': BaseLogin,
+                'base-agree': BaseAgree
+            },
+            mixins: [baseMixin, routerMixin],
+            data: {
+                problem: {}
+            },
+            methods: {
+                goNext(url) {
+                    homeApi.user_login().then(function () {
+                        window.location.href = url
+                    }).catch(function (err) {
+                        vm.$message.error(err.msg);
+                        vm.loginOpen()
+                    });
+                }
+            }
+        })
+    })
+</script>
+{/block}
