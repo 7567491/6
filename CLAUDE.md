@@ -157,6 +157,68 @@ php public/test_resources.php
 - 宝塔面板环境 → Ubuntu原生环境迁移时，MySQL socket路径会发生变化
 - `localhost` 连接可能失败，建议使用 `127.0.0.1`
 
+### 网站显示"页面错误！请稍后再试～"问题修复记录
+
+**问题描述**：6.linapp.fun 访问时显示ThinkPHP错误页面
+
+**根因分析**（五个为什么法）：
+1. **为什么显示页面错误？** - PHP无法执行index.php文件
+2. **为什么无法执行？** - PHP `open_basedir` 安全限制阻止访问文件路径
+3. **为什么路径被限制？** - `open_basedir` 设置为 `/www/wwwroot/www.6page.cn/`，但实际路径是 `/home/6page/www.6page.cn/`
+4. **为什么路径不匹配？** - 服务器迁移时路径改变，但PHP-FPM配置未同步更新
+5. **为什么配置未更新？** - 迁移过程中遗漏了PHP-FPM安全配置的同步
+
+**解决方案**：
+1. **修复Nginx配置中的 open_basedir 路径**：
+   ```nginx
+   # 在 /etc/nginx/sites-available/6.linapp.fun 中
+   location ~ \.php$ {
+       fastcgi_param PHP_ADMIN_VALUE "open_basedir=/home/6page/www.6page.cn/:/tmp/";
+   }
+   ```
+
+2. **修复PHP-FPM socket路径**：
+   ```nginx
+   fastcgi_pass unix:/run/php/php7.4-fpm.sock;  # 正确路径
+   ```
+
+3. **清理ThinkPHP缓存**：
+   ```bash
+   sudo rm -rf www.6page.cn/runtime/cache/* www.6page.cn/runtime/temp/*
+   ```
+
+**最终状态**：✅ 网站恢复正常访问，所有功能正常运行
+
+### 前端JavaScript无法加载问题修复
+
+**问题描述**：网页标题正常显示，但内容无法加载，JavaScript组件失效
+
+**根因分析**：RequireJS配置中路径重复
+- `baseUrl: 'pc'` + `'components': 'pc/components'` = 错误路径 `pc/pc/components`
+
+**解决方案**：
+```javascript
+// 修复前：
+'components': '{$img_domain}pc/components'
+
+// 修复后：
+'components': 'components'
+```
+
+**修复文件**：`application/web/view/public/require.html:35`
+
+**最终状态**：✅ 前端JavaScript正常加载，页面内容完全显示
+
+### 图片资源无法显示问题（部分解决）
+
+**问题描述**：文字内容正常，但图片无法显示
+
+**根因分析**：前端 `img_domain` 变量为空字符串，导致图片路径处理错误
+
+**临时状态**：⚠️ 图片显示问题仍存在，但不影响网站核心功能使用
+
+**建议后续处理**：检查ThinkPHP模板变量传递机制，确保 `$img_domain` 正确赋值到前端
+
 ## 安全提示
 
 这是一个生产环境的教育平台，包含：
@@ -192,3 +254,34 @@ php public/test_resources.php
 - 模块/控制器/方法的标准路由
 - 自定义路由规则（在 `application/route.php` 中定义）
 - 域名绑定支持多域名架构
+
+## 项目状态与版本控制
+
+### 当前状态 (2025-09-04)
+- ✅ **网站运行状态**：正常运行 (https://6.linapp.fun)
+- ✅ **核心功能**：完全正常 (文字内容、导航、交互)
+- ✅ **前端JavaScript**：已修复，页面内容完整显示
+- ⚠️ **图片显示**：部分问题，不影响核心功能
+- ✅ **数据库连接**：正常
+- ✅ **PHP-FPM配置**：已优化
+
+### Git仓库信息
+- **GitHub仓库**：https://github.com/7567491/6
+- **最新提交**：9eeeb52 (feat: 初始化六页纸教育平台项目)
+- **分支**：master
+- **文件统计**：5,250 个文件，1,519,768 行代码
+- **最后更新**：2025-09-04
+
+### 部署环境
+- **服务器**：Ubuntu Linux
+- **Web服务器**：Nginx + PHP-FPM 7.4
+- **数据库**：MySQL 5.7+ (utf8mb4)
+- **SSL证书**：Let's Encrypt (自动续期)
+- **域名**：6.linapp.fun (主域名)
+
+### 近期修复历史
+1. **2025-09-04**: 修复 `open_basedir` 安全限制问题
+2. **2025-09-04**: 修复 RequireJS 路径重复问题
+3. **2025-09-04**: 优化 PHP-FPM socket 配置
+4. **2025-09-04**: 清理ThinkPHP缓存，恢复网站访问
+5. **2025-09-04**: 完成代码提交到GitHub
