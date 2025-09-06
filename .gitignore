@@ -80,3 +80,14 @@ mig1.md
 /configs/vhost/ssl/
 /backups/
 .websites_backup.*
+
+# 本地开发和测试目录
+.local/
+6page-v1.0/
+
+# 开发测试文件
+test_img_domain*.php
+final_verification.php
+
+# 设计文档目录
+design/
