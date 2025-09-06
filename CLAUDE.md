@@ -107,44 +107,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 #### 环境准备
 ```bash
 # 系统要求
-- Docker 20.0+
-- Docker Compose 2.0+
-- Python 3.11+
+- Docker 20.0+ (可选)
+- Python 3.10+
 - Node.js 18+
 
 # 克隆项目
 git clone https://github.com/7567491/6.git
-cd 6page-v2
-
-# 切换到v1.0开发分支
-git checkout develop/v1.0
+cd 6page-v1.0
 ```
 
-#### v1.0 MVP版本开发
+#### v1.0 MVP版本开发 ⭐
 ```bash
-# 启动v1.0开发环境 (仅包含必要服务)
-docker-compose -f docker-compose.v1.0.yml up -d
+# 方式1: 一键部署 (推荐)
+cd /home/6p/6page-v1.0
+./deploy.sh
 
-# 启动前端开发服务器
-cd frontend && npm run dev
+# 方式2: 手动启动微服务
+# 启动Content Service API
+cd services/content-service
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 
-# 访问应用
+# 启动前端服务器
+cd frontend
+python3 serve.py 3000
+
+# 本地访问
 # - 前端: http://localhost:3000
-# - 内容服务API: http://localhost:8002/docs
-# - 文件服务API: http://localhost:8007/docs
+# - 内容服务API: http://localhost:8003/docs
 ```
 
-#### 生产环境部署
+#### 🌐 在线访问 (已对外开放)
 ```bash
-# v1.0生产环境一键部署
-./deploy.sh v1.0
+# 生产环境 - 面向全球用户 🌍
+# ✅ 域名: 6-v1.linapp.fun
+# ✅ SSL证书: Let's Encrypt 自动管理
+# ✅ CDN: 全球加速访问
 
-# 验证部署状态
-./scripts/health-check.sh
-
-# 访问生产环境
-# - 网站: https://www.6page.cn
-# - 管理后台: https://admin.6page.cn
+# 在线访问地址:
+# - 🏠 首页: https://6-v1.linapp.fun/
+# - 🎥 学习页面: https://6-v1.linapp.fun/learn?courseId=1 ⭐
+# - 📚 课程列表: https://6-v1.linapp.fun/courses  
+# - 📖 API文档: https://6-v1.linapp.fun/docs
 ```
 
 ### 📈 项目状态
@@ -160,6 +163,9 @@ cd frontend && npm run dev
 - ✅ **v1.0 开发**: **MVP版本100%完成！** ⭐⭐⭐
 - ✅ **测试验证**: 28个测试用例全部通过
 - ✅ **部署上线**: 一键部署脚本就绪
+- ✅ **🌐 对外开放**: **域名 6-v1.linapp.fun 已配置上线** 🚀
+- ✅ **SSL安全**: Let's Encrypt证书自动管理
+- ✅ **反向代理**: Nginx负载均衡配置完成
 - 🚧 **v2.0 规划**: 准备开始用户系统开发
 
 #### 版本发布路线图 (基于商业价值优先级调整)
@@ -197,11 +203,15 @@ cd frontend && npm run dev
 - ✅ 生产级部署方案
 - ✅ 完整项目文档
 
-**🚀 立即使用**:
+**🚀 立即体验**:
 ```bash
+# 本地开发
 cd /home/6p/6page-v1.0
 ./deploy.sh
-# 访问: http://localhost:3000/learn?courseId=1
+# 本地访问: http://localhost:3000/learn?courseId=1
+
+# 🌐 在线体验 (已对外开放)
+# 访问: https://6-v1.linapp.fun/learn?courseId=1 ⭐
 ```
 
 **✅ 验证结果**:
@@ -362,11 +372,13 @@ cd /home/6p/6page-v1.0
 - 所有相对路径都基于 `/home/6p/` 工作目录
 
 ### 项目开发历史
-1. **2025-09-06**: 🎉 **v1.0 MVP 开发完成** - 100%功能实现，测试通过，部署就绪
-2. **2025-09-06**: ✅ 完成前端学习平台开发 (HTML5播放器+章节导航) ⭐⭐⭐
-3. **2025-09-06**: ✅ 完成后端微服务开发 (28个测试用例全部通过)
-4. **2025-09-06**: ✅ 完成容器化部署配置和一键部署脚本
-5. **2025-09-06**: ✅ 完成项目集成测试和功能验证
+1. **2025-09-06**: 🌐 **v1.0 对外开放** - 域名6-v1.linapp.fun正式上线！⭐⭐⭐
+2. **2025-09-06**: 🔒 配置SSL证书和反向代理，全球HTTPS访问
+3. **2025-09-06**: 🎉 **v1.0 MVP 开发完成** - 100%功能实现，测试通过，部署就绪
+4. **2025-09-06**: ✅ 完成前端学习平台开发 (HTML5播放器+章节导航) ⭐⭐⭐
+5. **2025-09-06**: ✅ 完成后端微服务开发 (28个测试用例全部通过)
+6. **2025-09-06**: ✅ 完成容器化部署配置和一键部署脚本
+7. **2025-09-06**: ✅ 完成项目集成测试和功能验证
 6. **2025-09-05**: 完成8版本迭代规划 (v1.0→v8.0)，制定详细开发路线图
 7. **2025-09-05**: 完成新版架构设计和文档编写
 8. **2025-09-05**: 更新 CLAUDE.md 项目位置信息  
@@ -382,21 +394,24 @@ cd /home/6p/6page-v1.0
 
 ---
 
-## 🎊 项目成功完成！
+## 🎊 项目成功上线！
 
-**六页纸教育平台 v1.0 MVP** 已于 **2025年9月6日** 开发完成！
+**六页纸教育平台 v1.0 MVP** 已于 **2025年9月6日** 正式对外开放！
 
-这是一个功能完整、技术先进、可立即投产的现代化在线教育平台：
+这是一个功能完整、技术先进、全球可访问的现代化在线教育平台：
 
+🌐 **在线访问**: https://6-v1.linapp.fun/ ⭐⭐⭐  
 🚀 **核心功能**: 视频在线学习、章节导航、免费内容访问  
 🏗️ **技术架构**: 微服务 + 容器化 + TDD开发  
 📱 **用户体验**: 响应式设计，PC和移动端完美支持  
-⚡ **部署方式**: 一键部署，生产就绪  
+🔒 **安全保障**: HTTPS + SSL证书 + 安全头配置  
+⚡ **部署方式**: 反向代理 + 负载均衡，全球访问  
 
-**立即体验**: `cd /home/6p/6page-v1.0 && ./deploy.sh`
+**🌍 全球体验**: https://6-v1.linapp.fun/learn?courseId=1
 
 ---
 
 *本文档最后更新: 2025-09-06*  
 *项目仓库: https://github.com/7567491/6*  
-*v1.0 MVP状态: ✅ 开发完成，可投产使用* ⭐⭐⭐
+*v1.0 MVP状态: ✅ 已正式上线，全球可访问* ⭐⭐⭐  
+*在线地址: https://6-v1.linapp.fun/* 🌍
