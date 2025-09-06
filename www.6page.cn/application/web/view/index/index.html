@@ -573,7 +573,7 @@
             },
             methods: {
                 bannerChanged: function (index) {
-                    this.homeTopBg = 'url({$img_domain}'+ allBannerList[index]['pic'] +')'
+                    this.homeTopBg = 'url(' + img_domain + allBannerList[index]['pic'] +')'
                 },
                 getHotSearch: function () {
                     homeApi.hotSearch().then(function (res) {

@@ -10,9 +10,9 @@
     <link rel="icon" href="{$site_favicon|default=''}" type="image/png">
     
     <!-- 基础样式 -->
-    <link rel="stylesheet" href="{$img_domain}pc/styles/normalize.css">
-    <link rel="stylesheet" href="{$img_domain}pc/styles/global.min.css">
-    <link rel="stylesheet" href="{$img_domain}pc/font/iconfont.css">
+    <link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}pc/styles/normalize.css">
+    <link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}pc/styles/global.min.css">
+    <link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}pc/font/iconfont.css">
     
     <!-- Element UI -->
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
@@ -23,7 +23,7 @@
     
     <!-- 全局变量设置 -->
     <script type="text/javascript">
-        var img_domain = "{$img_domain}";
+        var img_domain = "{$Think.const.IMG_DOMAIN}";
         var router = {
             home: "{:url('/index')}",
             course: "{:url('/course')}",

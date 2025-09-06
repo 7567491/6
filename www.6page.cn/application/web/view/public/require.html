@@ -1,8 +1,8 @@
-<script src="{$img_domain}pc/requirejs/require.js"></script>
+<script src="{$Think.const.IMG_DOMAIN}pc/requirejs/require.js"></script>
 <script>
     require.config({
         urlArgs: 'bust=' + (new Date()).getTime(),
-        baseUrl: '{$img_domain}pc',
+        baseUrl: '{$Think.const.IMG_DOMAIN}pc',
         map: {
             '*': {
                 'css': 'plugins/require-css/css'

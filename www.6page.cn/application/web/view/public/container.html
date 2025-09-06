@@ -15,19 +15,19 @@
     <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-vod-min.js"></script>
     <script charset="utf-8" type="text/javascript" src="https://g.alicdn.com/apsara-media-box/imp-web-player/2.16.3/hls/aliplayer-hls-min.js"></script>
     {else}
-    <link rel="stylesheet" href="{$img_domain}static/aliplayer/aliplayer-min.css" />
-    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-min.js"></script>
-    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-vod-p-min.js"></script>
-    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-vod-min.js"></script>
-    <script type="text/javascript" src="{$img_domain}static/aliplayer/aliplayer-hls-min.js"></script>
+    <link rel="stylesheet" href="{$Think.const.IMG_DOMAIN}static/aliplayer/aliplayer-min.css" />
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/aliplayer/aliplayer-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/aliplayer/aliplayer-vod-p-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/aliplayer/aliplayer-vod-min.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/aliplayer/aliplayer-hls-min.js"></script>
     {/if}
 
     {if ($slide_captcha == 1)}
-    <link rel="stylesheet" type="text/css" href="{$img_domain}static/captcha/css/verify.css">
-    <script type="text/javascript" src="{$img_domain}static/captcha/js/jquery.min.js" ></script>
-    <script type="text/javascript" src="{$img_domain}static/captcha/js/crypto-js.js"></script>
-    <script type="text/javascript" src="{$img_domain}static/captcha/js/ase.js"></script>
-    <script type="text/javascript" src="{$img_domain}static/captcha/js/verify.js"></script>
+    <link rel="stylesheet" type="text/css" href="{$Think.const.IMG_DOMAIN}static/captcha/css/verify.css">
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/captcha/js/jquery.min.js" ></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/captcha/js/crypto-js.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/captcha/js/ase.js"></script>
+    <script type="text/javascript" src="{$Think.const.IMG_DOMAIN}static/captcha/js/verify.js"></script>
     <script type="text/javascript">
         var slide_captcha = {$slide_captcha};
         var slide_captcha_api = "{$slide_captcha_api}";
@@ -36,7 +36,7 @@
 
     <script type="text/javascript">
         var login_types = {$login_types};
-        var img_domain = "{$img_domain}";
+        var img_domain = "{$Think.const.IMG_DOMAIN}";
         function fx_cdn_img(src) {
             if (!src) return;
             let domain = img_domain;
